@@ -8,15 +8,6 @@
     "type": "git",
     "url": "https://github.com/sunflowr/pixiedust.git"
   },
-  "build": {
-    "publish": [
-      {
-        "provider": "sunflowr",
-        "owner": "iffy",
-        "repo": "pixiedust"
-      }
-    ]
-  },
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
