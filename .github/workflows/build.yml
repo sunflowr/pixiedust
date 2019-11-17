@@ -1,0 +1,29 @@
+name: Build/release macOS
+
+on:
+  push:
+    branches: 
+      - master
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-10.14, windows-2016]
+        #os: [macos-10.14, windows-2019, ubuntu-18.04]
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions/setup-node@master
+        with:
+          node-version: 12.12
+      - name: Install dependencies
+        run: npm install
+        env:
+          CI: true
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: Publish
+        run: npx vue-cli-service electron:build --publish always
+        env:
+          CI: true
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}

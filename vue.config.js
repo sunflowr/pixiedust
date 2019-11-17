@@ -5,8 +5,8 @@ module.exports = {
   pluginOptions: {
     electronBuilder: {
       builderOptions: {
-        productName: "PixieDust",
         appId: "se.obsolete.pixiedust",
+        productName: "PixieDust",
         dmg: {
           contents: [
             {
