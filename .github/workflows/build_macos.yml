@@ -20,22 +20,22 @@ jobs:
         env:
           CI: true
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      - name: Build
-        run: npm run electron:build
-        env:
-          CI: true
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      #- name: Publish
-      #  run: npx vue-cli-service electron:build --publish always
+      #- name: Build
+      #  run: npm run electron:build
       #  env:
       #    CI: true
       #    GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      - name: Package Artifacts
-        run: |
-          mkdir artifact-zip
-          mv dist_electron/*.zip artifact-zip/
-      - uses: actions/upload-artifact@master
-        name: Upload ZIP
-        with:
-          name: PixieDust-osx.zip
-          path: artifact-zip
+      - name: Publish
+        run: npx vue-cli-service electron:build --publish always
+        env:
+          CI: true
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      #- name: Package Artifacts
+      #  run: |
+      #    mkdir artifact-zip
+      #    mv dist_electron/*.zip artifact-zip/
+      #- uses: actions/upload-artifact@master
+      #  name: Upload ZIP
+      #  with:
+      #    name: PixieDust-osx.zip
+      #    path: artifact-zip
