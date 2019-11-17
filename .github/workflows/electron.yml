@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: 
+      - master
+
+jobs:
+  build_on_mac:
+    runs-on: macOS-10.14
+    steps:
+      - uses: actions/checkout@master
+        with:
+          ref: electron
+      - uses: actions/setup-node@master
+        with:
+          node-version: 12.12
+      - name: see directory
+        run: ls
+
+  build_on_win:
+    runs-on: windows-2016
+    steps:
+      - uses: actions/checkout@master
+        with:
+          ref: feature/github-actions
+      - uses: actions/setup-node@master
+        with:
+          node-version: 12.12
+      - name: see directory
+        run: ls
