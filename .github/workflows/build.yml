@@ -23,14 +23,14 @@ jobs:
           node-version: 12.12
       - name: Install dependencies
         run: npm install
-      - name: Build Electron
-        run: npm run electron:build
-      - name: see directory
-        run: ls ./dist_electron
+      #- name: Build Electron
+      #  run: npm run electron:build
+      #- name: see directory
+      #  run: ls ./dist_electron
       - name: Publish
         run: npx vue-cli-service electron:build --publish always
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       #- name: Get the version
       #  id: version
       #  run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
