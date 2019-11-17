@@ -28,7 +28,7 @@ jobs:
       - name: see directory
         run: ls ./dist_electron
       - name: Publish
-        run: vue-cli-service electron:build --publish always
+        run: npx vue-cli-service electron:build --publish always
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       #- name: Get the version
