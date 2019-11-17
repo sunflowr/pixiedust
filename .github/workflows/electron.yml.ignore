@@ -21,6 +21,12 @@ jobs:
         run: npm run electron:build
       - name: see directory
         run: ls ./dist_electron
+#      - name: Check version
+#        run: PACKAGE_VERSION=$(cat package.json | grep version | head -1 | awk -F= "{ print $2 }" | sed 's/[version:,\",]//g' | tr -d '[[:space:]]')
+#      - uses: actions/upload-artifact@master
+#        with:
+#          name: my-artifact
+#          path: path/to/artifact
 
   build_on_win:
     runs-on: windows-2016
