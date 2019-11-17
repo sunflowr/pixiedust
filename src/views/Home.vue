@@ -27,7 +27,7 @@ export default {
       // get data using a promise with axios
       // the request url has the format base + /repos/:user/:repo/releases
       axios
-        .get("https://api.github.com/repos/sunflowr/recpu-tool/releases")
+        .get("https://api.github.com/repos/sunflowr/pixiedust/releases")
         .then(function(response) {
           var data = response.data;
 

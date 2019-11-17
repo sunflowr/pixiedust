@@ -28,9 +28,6 @@ module.exports = {
         },
         win: {
           icon: "public/icon.ico",
-          publish: {
-            provider: "github"
-          },
         },
         nsis: {
           deleteAppDataOnUninstall: true
@@ -45,7 +42,9 @@ module.exports = {
             owner: "sunflowr",
             repo: "pixiedust"
           }
-        ]
+        ],
+        releaseInfo: {
+        }
       }
     }
   }
