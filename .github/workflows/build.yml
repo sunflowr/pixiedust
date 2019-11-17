@@ -1,56 +1,56 @@
 name: Build/release
 
-on: push
+on:
+  push:
+#    branches: 
+#      - master
+    tags:
+      - 'v*'
 
 jobs:
   release:
     runs-on: ${{ matrix.os }}
-
-    # Platforms to build on/for
     strategy:
       matrix:
         os: [macos-10.14, windows-2016]
         #os: [macos-10.14, windows-2019, ubuntu-18.04]
-
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v1
-
-      - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@master
+        with:
+          ref: master
+      - uses: actions/setup-node@master
         with:
           node-version: 12.12
-
-      #- name: Install Snapcraft
-      #  uses: samuelmeuli/action-snapcraft@v1
-      #  # Only install Snapcraft on Ubuntu
-      #  if: startsWith(matrix.os, 'ubuntu')
+      - name: Install dependencies
+        run: npm install
+      - name: Build Electron
+        run: npm run electron:build
+      - name: see directory
+        run: ls ./dist_electron
+      - name: Publish
+        run: vue-cli-service electron:build --publish always
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #- name: Get the version
+      #  id: version
+      #  run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+      #- name: Create Release
+      #  id: create_release
+      #  uses: actions/create-release@v1.0.0
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       #  with:
-      #    # Log in to Snap Store
-      #    snapcraft_token: ${{ secrets.snapcraft_token }}
-
-      #- name: Prepare for app notarization (macOS)
-      #  if: startsWith(matrix.os, 'macos')
-      #  # Import Apple API key for app notarization on macOS
-      #  run: |
-      #    mkdir -p ~/private_keys/
-      #    echo '${{ secrets.apple_api_key }}' > ~/private_keys/AuthKey_${{ secrets.apple_api_key_id }}.p8
-
-      - name: Build/release Electron app
-        uses: samuelmeuli/action-electron-builder@v1
-        with:
-          # macOS notarization API key
-          #apple_api_key_id: ${{ secrets.apple_api_key_id }}
-          #apple_api_key_issuer: ${{ secrets.apple_api_key_issuer }}
-
-          # GitHub token, automatically provided to the action
-          # (No need to define this secret in the repo settings)
-          github_token: ${{ secrets.github_token }}
-
-          # macOS code signing certificate
-          #mac_certs: ${{ secrets.mac_certs }}
-          #mac_certs_password: ${{ secrets.mac_certs_password }}
-
-          # If the commit is tagged with a version (e.g. "v1.0.0"),
-          # release the app after building
-          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      #    tag_name: ${{ github.ref }}
+      #    release_name: Release ${{ github.ref }}
+      #    draft: false
+      #    prerelease: false
+      #- name: Upload Release Asset
+      #  id: upload-release-asset 
+      #  uses: actions/upload-release-asset@v1.0.1
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #  with:
+      #    upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+      #    asset_path: './dist_electron/PixieDust-*.zip'
+      #    asset_name: PixieDust-${{ matrix.os }}-.zip
+      #    asset_content_type: application/zip
