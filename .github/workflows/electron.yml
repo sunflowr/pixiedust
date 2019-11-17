@@ -20,7 +20,7 @@ jobs:
       - name: Build Electron
         run: npm run electron:build
       - name: see directory
-        run: ls ./electron_dist
+        run: ls ./dist_electron
 
   build_on_win:
     runs-on: windows-2016
