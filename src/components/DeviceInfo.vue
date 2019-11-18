@@ -9,13 +9,14 @@
     </v-card-title>
     <v-card-subtitle></v-card-subtitle>
     <v-card-text>
-      <div>Available in next release!</div>
       <div>{{ receiveStatus }}</div>
       <div>{{ uploadStatus }}</div>
       <div v-if="deviceInfo2">
-        <p>Version: {{ deviceInfo2.version.major }}.{{ deviceInfo2.version.minor }}.{{ deviceInfo2.version.patch }}</p>
-        <p>Checksum: {{ deviceInfo2.checksum }}</p>
-        <p>DataChecksum: {{ deviceInfo2.dataChecksum }}</p>
+        <ul>
+          <li>Hardware id: {{ deviceInfo2.version.hwid }}</li>
+          <li>App Version: {{ deviceInfo2.version.major }}.{{ deviceInfo2.version.minor }}.{{ deviceInfo2.version.patch }}</li>
+          <li>App Name: {{ deviceInfo2.version.name }}</li>
+        </ul>
       </div>
     </v-card-text>
   </v-card>
@@ -38,9 +39,8 @@ export default {
     };
   },
   mounted() {
-    this.registerSysExListen;
-    if (this.midiInputDevice) {
-      this.midiInputDevice.addListener("sysex", this.onSysExReceive);
+    if (this.midiInDevice) {
+      this.midiInDevice.addListener("sysex", undefined, this.onSysExReceive);
     }
   },
   computed: {
@@ -51,12 +51,20 @@ export default {
     },
     midiOutDevice: {
       get() {
-        return this.$MIDI.webMidi.getOutputById(this.settings.midiOutputDevice);
+        if (this.$MIDI && this.$MIDI.webMidi) {
+          return this.$MIDI.webMidi.getOutputById(
+            this.settings.midiOutputDevice
+          );
+        }
+        return null;
       }
     },
     midiInDevice: {
       get() {
-        return this.$MIDI.webMidi.getInputById(this.settings.midiInputDevice);
+        if (this.$MIDI && this.$MIDI.webMidi) {
+          return this.$MIDI.webMidi.getInputById(this.settings.midiInputDevice);
+        }
+        return null;
       }
     }
   },
@@ -91,7 +99,6 @@ export default {
           "SysEx data length is uneven, the received data is most likely corrupt.";
         return;
       }
-      this.receiveStatus = "Rasdko";
 
       const data = sysExUtil.denibbelize(sdata);
       if (data.length > 1) {
@@ -103,8 +110,14 @@ export default {
           dataChecksum = (dataChecksum + data[j]) & 0xff; // Expected to be a UInt8 value.
         }
 
-        let ver = {};
+        if (checksum != dataChecksum) {
+          this.receiveStatus = "Error when reciving, data is corrupt.";
+        }
+
+        this.uploadStatus = data;
+
         let i = 0;
+        const ver = {};
         ver.magic =
           (data[i++] << 24) | (data[i++] << 16) | (data[i++] << 8) | data[i++]; // UInt32
         ver.hwid =
@@ -115,9 +128,9 @@ export default {
         ver.minor = data[i++]; // UInt8
         ver.patch = data[i++]; // UInt8
         ver.revision = data[i++]; // UInt16
-        this.deviceInfo2.version = ver;
-        this.deviceInfo2.checksum = checksum;
-        this.deviceInfo2.dataChecksum = dataChecksum;
+        this.deviceInfo2 = {
+          version: ver
+        };
       }
     }
   }

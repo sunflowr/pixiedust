@@ -169,11 +169,11 @@ class SysExUtil {
 }
 
 export const sysExTypes = {
-    uploadApplication: 1,
-    uploadBootloader: 2,
-    uploadEmuFW: 3,
-    test: 4,
-    reset: 5
+    uploadBootloader: 0x01,
+    uploadApplication: 0x02,
+    uploadEmuFW: 0x03,
+    test: 0x04,
+    reset: 0x05
 };
 
 export let sysExUtil = new SysExUtil();

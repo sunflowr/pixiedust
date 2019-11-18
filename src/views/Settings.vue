@@ -36,9 +36,9 @@
 
       <v-row class="mb-4" justify="space-between">
         <v-col class="text-left subheading font-weight-light">
-          <span>Pause</span>
+          <span>Pause&nbsp;</span>
           <span v-text="settings.uploadDelay" />
-          <span>ms between messages</span>
+          <span>&nbsp;ms between messages</span>
         </v-col>
       </v-row>
       <v-slider v-model="settings.uploadDelay" always-dirty min="1" max="1000" />

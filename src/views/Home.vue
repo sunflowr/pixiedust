@@ -89,7 +89,7 @@ export default {
 <template>
   <v-container fluid>
     <v-row>
-      <v-col v-for="(release, index) in cpuReleasesInfo.releases" :key="index" cols="12">
+      <v-col cols="12">
         <DeviceInfo :data="deviceInfo" />
       </v-col>
     </v-row>

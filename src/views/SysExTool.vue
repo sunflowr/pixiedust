@@ -71,8 +71,16 @@ export default {
         { text: "Bootloader", value: sysExTypes.uploadBootloader }
       ],
       checksums: [
-        { value: 0x268a8d8b, text: "TB-303 firmware", type: "emufw" },
-        { value: 0xeee88f80, text: "TR-606 firmware", type: "emufw" }
+        {
+          value: 0x268a8d8b,
+          text: "TB-303 firmware",
+          type: sysExTypes.uploadEmuFW
+        },
+        {
+          value: 0xeee88f80,
+          text: "TR-606 firmware",
+          type: sysExTypes.uploadEmuFW
+        }
       ],
       fileTest: null,
       convertDialog: false,
