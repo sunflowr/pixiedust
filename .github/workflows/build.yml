@@ -21,14 +21,14 @@ jobs:
         run: npm install
         env:
           CI: true
-          GH_TOKEN: ${{ secrets.github_token }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
       - name: Lint
         run: npm run lint
         env:
           CI: true
-          GH_TOKEN: ${{ secrets.github_token }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
       - name: Publish
         run: npx vue-cli-service electron:build --publish always
         env:
           CI: true
-          GH_TOKEN: ${{ secrets.github_token }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
