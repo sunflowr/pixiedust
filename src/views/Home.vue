@@ -8,31 +8,40 @@ export default {
     GitHubReleaseCard
   },
   mounted() {
-    this.sendReq();
+    this.sendReq("https://api.github.com/repos/sunflowr/recpu/releases", this.cpuReleasesInfo);
+    this.sendReq("https://api.github.com/repos/sunflowr/pixiedust/releases", this.appReleasesInfo);
   },
   data() {
     return {
-      errorMessage: "",
-      releases: [],
-      grandTotal: 0,
-      success: true,
-      empty: false
+      cpuReleasesInfo: {
+        errorMessage: "",
+        releases: [],
+        grandTotal: 0,
+        success: true,
+        empty: false
+      },
+      appReleasesInfo: {
+        errorMessage: "",
+        releases: [],
+        grandTotal: 0,
+        success: true,
+        empty: false
+      }
     };
   },
   methods: {
-    sendReq: function() {
-      var that = this;
-      this.empty = false;
+    sendReq: function(url, releaseInfo) {
+      releaseInfo.empty = false;
 
       // get data using a promise with axios
       // the request url has the format base + /repos/:user/:repo/releases
       axios
-        .get("https://api.github.com/repos/sunflowr/pixiedust/releases")
+        .get(url)
         .then(function(response) {
           var data = response.data;
 
           // the total of all the release downloads
-          that.grandTotal = 0;
+          releaseInfo.grandTotal = 0;
 
           for (let i = 0; i < data.length; i++) {
             // total of a particular release version
@@ -46,24 +55,22 @@ export default {
             }
             // add a new field to the data object
             data[i].total = total;
-            that.grandTotal += total;
+            releaseInfo.grandTotal += total;
           }
-
-          // that.releases is an array of releases
-          that.releases = data;
+          releaseInfo.releases = data;
 
           // if we got this far that means the request was a success
-          that.success = true;
+          releaseInfo.success = true;
           if (response.data.length === 0) {
             // check if there are any releases for the repo
-            that.empty = true;
+            releaseInfo.empty = true;
           }
         })
         .catch(function(error) {
           // if there's an error then the request was not a success
-          that.errorMessage = error.message;
-          that.success = false;
-          that.empty = false;
+          releaseInfo.errorMessage = error.message;
+          releaseInfo.success = false;
+          releaseInfo.empty = false;
         });
     }
   }
@@ -77,13 +84,28 @@ export default {
         <v-card class="mx-auto" max-width="600px">
           <v-card-text>
             <p>Latest releases:</p>
-            <h5 v-if="grandTotal && success">Total Downloads: {{ grandTotal.toLocaleString() }}</h5>
-            <h5 v-if="!success">No repository found</h5>
-            <h5 v-if="empty">No Releases</h5>
+            <h5 v-if="appReleasesInfo.grandTotal && success">Total Downloads: {{ appReleasesInfo.grandTotal.toLocaleString() }}</h5>
+            <h5 v-if="!appReleasesInfo.success">No repository found</h5>
+            <h5 v-if="appReleasesInfo.empty">No Releases</h5>
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col v-for="(release , index) in releases" :key="index" cols="12">
+      <v-col v-for="(release, index) in cpuReleasesInfo.releases" :key="index" cols="12">
+        <GitHubReleaseCard :index="index" :release="release" />
+      </v-col>
+    </v-row>
+    <v-row dense>
+      <v-col cols="12">
+        <v-card class="mx-auto" max-width="600px">
+          <v-card-text>
+            <p>Latest releases:</p>
+            <h5 v-if="appReleasesInfo.grandTotal && success">Total Downloads: {{ appReleasesInfo.grandTotal.toLocaleString() }}</h5>
+            <h5 v-if="!appReleasesInfo.success">No repository found</h5>
+            <h5 v-if="appReleasesInfo.empty">No Releases</h5>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col v-for="(release, index) in appReleasesInfo.releases" :key="index" cols="12">
         <GitHubReleaseCard :index="index" :release="release" />
       </v-col>
     </v-row>
