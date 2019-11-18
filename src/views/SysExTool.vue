@@ -66,9 +66,9 @@ export default {
   data() {
     return {
       dataTypes: [
-        { text: "Emulator Firmware", value: "emufw" },
-        { text: "Application", value: "application" },
-        { text: "Bootloader", value: "bootloader" }
+        { text: "Emulator Firmware", value: sysExTypes.uploadEmuFW },
+        { text: "Application", value: sysExTypes.uploadApplication },
+        { text: "Bootloader", value: sysExTypes.uploadBootloader }
       ],
       checksums: [
         { value: 0x268a8d8b, text: "TB-303 firmware", type: "emufw" },
@@ -76,7 +76,7 @@ export default {
       ],
       fileTest: null,
       convertDialog: false,
-      outputDataType: "emufw",
+      outputDataType: sysExTypes.uploadEmuFW,
       inputFile: null,
       sysExFile: null,
       convertProgress: 0,
@@ -86,15 +86,8 @@ export default {
   methods: {
     convert() {
       if (this.inputFile) {
-        const sysExTypeMap = {
-          application: sysExTypes.uploadApplication,
-          bootloader: sysExTypes.uploadBootloader,
-          emufw: sysExTypes.uploadEmuFW,
-          test: sysExTypes.test
-        };
-        const sysExType = sysExTypeMap[this.outputDataType];
-
-        this.convertStatus = "Converting " + this.inputFile.name + "...";
+        const sysExType = this.outputDataType;
+        this.convertStatus = "Converting " + this.inputFile.name + "... ";
         this.convertProgress = 0;
         this.convertDialog = true;
 
@@ -156,8 +149,7 @@ export default {
           that.fileTest = id.text;
           that.outputDataType = id.type;
         } else {
-          that.fileTest = checksum;
-          that.outputDataType = id.type;
+          that.fileTest = null;
         }
       };
       fileReader.readAsArrayBuffer(this.fileTest);

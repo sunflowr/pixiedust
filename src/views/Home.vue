@@ -1,11 +1,13 @@
 <script>
 import axios from "axios";
 import GitHubReleaseCard from "@/components/GitHubReleaseCard.vue";
+import DeviceInfo from "@/components/DeviceInfo.vue";
 
 export default {
   name: "Home",
   components: {
-    GitHubReleaseCard
+    GitHubReleaseCard,
+    DeviceInfo
   },
   mounted() {
     this.sendReq(
@@ -32,7 +34,8 @@ export default {
         grandTotal: 0,
         success: true,
         empty: false
-      }
+      },
+      deviceInfo: {}
     };
   },
   methods: {
@@ -85,35 +88,29 @@ export default {
 
 <template>
   <v-container fluid>
-    <v-row dense>
+    <v-row>
+      <v-col v-for="(release, index) in cpuReleasesInfo.releases" :key="index" cols="12">
+        <DeviceInfo :data="deviceInfo" />
+      </v-col>
+    </v-row>
+    <v-row>
       <v-col cols="12">
-        <v-card class="mx-auto" max-width="600px">
-          <v-card-text>
-            <p>Latest releases:</p>
-            <h5
-              v-if="cpuReleasesInfo.grandTotal && success"
-            >Total Downloads: {{ cpuReleasesInfo.grandTotal.toLocaleString() }}</h5>
-            <h5 v-if="!cpuReleasesInfo.success">No repository found</h5>
-            <h5 v-if="cpuReleasesInfo.empty">No Releases</h5>
-          </v-card-text>
-        </v-card>
+        <p>Latest CPU firmware releases:</p>
+        <!--<h5
+          v-if="cpuReleasesInfo.grandTotal && cpuReleasesInfo.success"
+        >Total Downloads: {{ cpuReleasesInfo.grandTotal.toLocaleString() }}</h5>-->
+        <h5 v-if="!cpuReleasesInfo.success">No repository found</h5>
+        <h5 v-if="cpuReleasesInfo.empty">No Releases</h5>
       </v-col>
       <v-col v-for="(release, index) in cpuReleasesInfo.releases" :key="index" cols="12">
         <GitHubReleaseCard :index="index" :release="release" />
       </v-col>
     </v-row>
-    <v-row dense>
+    <v-row>
       <v-col cols="12">
-        <v-card class="mx-auto" max-width="600px">
-          <v-card-text>
-            <p>Latest releases:</p>
-            <h5
-              v-if="appReleasesInfo.grandTotal && success"
-            >Total Downloads: {{ appReleasesInfo.grandTotal.toLocaleString() }}</h5>
-            <h5 v-if="!appReleasesInfo.success">No repository found</h5>
-            <h5 v-if="appReleasesInfo.empty">No Releases</h5>
-          </v-card-text>
-        </v-card>
+        <p>Latest app releases:</p>
+        <h5 v-if="!appReleasesInfo.success">No repository found</h5>
+        <h5 v-if="appReleasesInfo.empty">No Releases</h5>
       </v-col>
       <v-col v-for="(release, index) in appReleasesInfo.releases" :key="index" cols="12">
         <GitHubReleaseCard :index="index" :release="release" />
