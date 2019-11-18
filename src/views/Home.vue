@@ -8,8 +8,14 @@ export default {
     GitHubReleaseCard
   },
   mounted() {
-    this.sendReq("https://api.github.com/repos/sunflowr/recpu/releases", this.cpuReleasesInfo);
-    this.sendReq("https://api.github.com/repos/sunflowr/pixiedust/releases", this.appReleasesInfo);
+    this.sendReq(
+      "https://api.github.com/repos/sunflowr/recpu/releases",
+      this.cpuReleasesInfo
+    );
+    this.sendReq(
+      "https://api.github.com/repos/sunflowr/pixiedust/releases",
+      this.appReleasesInfo
+    );
   },
   data() {
     return {
@@ -84,9 +90,11 @@ export default {
         <v-card class="mx-auto" max-width="600px">
           <v-card-text>
             <p>Latest releases:</p>
-            <h5 v-if="appReleasesInfo.grandTotal && success">Total Downloads: {{ appReleasesInfo.grandTotal.toLocaleString() }}</h5>
-            <h5 v-if="!appReleasesInfo.success">No repository found</h5>
-            <h5 v-if="appReleasesInfo.empty">No Releases</h5>
+            <h5
+              v-if="cpuReleasesInfo.grandTotal && success"
+            >Total Downloads: {{ cpuReleasesInfo.grandTotal.toLocaleString() }}</h5>
+            <h5 v-if="!cpuReleasesInfo.success">No repository found</h5>
+            <h5 v-if="cpuReleasesInfo.empty">No Releases</h5>
           </v-card-text>
         </v-card>
       </v-col>
@@ -99,7 +107,9 @@ export default {
         <v-card class="mx-auto" max-width="600px">
           <v-card-text>
             <p>Latest releases:</p>
-            <h5 v-if="appReleasesInfo.grandTotal && success">Total Downloads: {{ appReleasesInfo.grandTotal.toLocaleString() }}</h5>
+            <h5
+              v-if="appReleasesInfo.grandTotal && success"
+            >Total Downloads: {{ appReleasesInfo.grandTotal.toLocaleString() }}</h5>
             <h5 v-if="!appReleasesInfo.success">No repository found</h5>
             <h5 v-if="appReleasesInfo.empty">No Releases</h5>
           </v-card-text>

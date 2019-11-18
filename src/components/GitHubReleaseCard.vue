@@ -20,7 +20,7 @@
                 </thead>
                 <tbody>
                   <tr v-for="(asset, index) in release.assets" :key="index">
-                    <td>{{ asset.name }}</td>
+                    <td><a :href="asset.browser_download_url" target="_blank">{{ asset.name }}</a></td>
                     <td>{{ asset.download_count.toLocaleString() }}</td>
                   </tr>
                 </tbody>

@@ -3,7 +3,7 @@
   "productName": "PixieDust",
   "description": "Tool for communicating with the RE-CPU",
   "author": "Pixie Johan Anderson",
-  "version": "0.1.1",
+  "version": "0.1.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/sunflowr/pixiedust.git"

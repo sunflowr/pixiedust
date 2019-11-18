@@ -101,7 +101,8 @@ export default {
     }
   },
   methods: {
-    midiInitialized(/*msg*/) {
+    /* eslint-disable no-unused-vars */
+    midiInitialized(msg) {
       if (!this.$Settings.midiInputDevice) {
         this.$Settings.midiInputDevice = this.$MIDI.inputDevices[0].id || "";
       }
@@ -109,25 +110,22 @@ export default {
         this.$Settings.midiOutputDevice = this.$MIDI.outputDevices[0].id || "";
       }
     },
+    /* eslint-enable no-unused-vars */
     midiFailed(msg) {
       this.errorMessage = {
         title: "Failed to initialize MIDI",
         text: msg
       };
     },
-    midiConnected(/*ev*/) {
-      //console.log(ev);
+    /* eslint-disable no-unused-vars */
+    midiConnected(ev) {
     },
+    /* eslint-enable no-unused-vars */
     midiDisconnected(ev) {
-      /*console.log(ev);
-      console.log(ev.port.id);
-      console.log(this.$Settings.midiInputDevice);*/
       if (ev.port.id === this.$Settings.midiInputDevice) {
-        //console.log("found");
         this.$Settings.midiInputDevice = this.$MIDI.inputDevices[0].id || "";
       }
       if (ev.port.id === this.$Settings.midiOutputDevice) {
-        //console.log("found");
         this.$Settings.midiOutputDevice = this.$MIDI.outputDevices[0].id || "";
       }
     }
