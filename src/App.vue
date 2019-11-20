@@ -77,7 +77,7 @@ export default {
     if (ipcRenderer) {
       /* eslint-disable no-unused-vars */
       ipcRenderer.on("navigate", (e, routePath) => {
-        if(this.$route.path !== routePath){
+        if (this.$route.path !== routePath) {
           this.$router.push(routePath);
         }
       });
@@ -105,6 +105,7 @@ export default {
     midiInitialized(msg) {
       if (!this.$Settings.midiInputDevice) {
         this.$Settings.midiInputDevice = this.$MIDI.inputDevices[0].id || "";
+        this.midiInputDeviceChanged();
       }
       if (!this.$Settings.midiOutputDevice) {
         this.$Settings.midiOutputDevice = this.$MIDI.outputDevices[0].id || "";
@@ -118,8 +119,7 @@ export default {
       };
     },
     /* eslint-disable no-unused-vars */
-    midiConnected(ev) {
-    },
+    midiConnected(ev) {},
     /* eslint-enable no-unused-vars */
     midiDisconnected(ev) {
       if (ev.port.id === this.$Settings.midiInputDevice) {
@@ -128,7 +128,20 @@ export default {
       if (ev.port.id === this.$Settings.midiOutputDevice) {
         this.$Settings.midiOutputDevice = this.$MIDI.outputDevices[0].id || "";
       }
-    }
+    },
+    /* eslint-disable no-unused-vars */
+    midiSysExReceived(ev) {},
+    /* eslint-enable no-unused-vars */
+    midiInputDeviceChanged() {
+      /*if (this.$Settings.midiInputDevice) {
+        this.$Settings.midiInputDevice.addListener(
+          "sysex",
+          undefined,
+          this.midiSysExReceived
+        );
+      }*/
+    },
+    midiOutputDeviceChanged() {}
   }
 };
 </script>
