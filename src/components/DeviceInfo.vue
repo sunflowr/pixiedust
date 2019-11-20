@@ -9,6 +9,7 @@
     </v-card-title>
     <v-card-subtitle></v-card-subtitle>
     <v-card-text>
+      <p>Sorry this will work properly in next version</p>
       <div>{{ receiveStatus }}</div>
       <div>{{ uploadStatus }}</div>
       <div v-if="deviceInfo2">

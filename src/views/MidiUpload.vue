@@ -1,5 +1,6 @@
 <template>
   <v-container v-if="$MIDI.webMidi">
+    <p>Sorry this will work more reliably in next version</p>
     <v-file-input
       :disabled="inputFile != null"
       v-model="inputFile"
