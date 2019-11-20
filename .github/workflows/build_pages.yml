@@ -1,0 +1,35 @@
+name: Build/release gh_pages
+
+on:
+  push:
+    branches: 
+      - master
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: actions/setup-node@master
+      with:
+        node-version: 12.12
+    - name: Install dependencies
+      run: npm install
+      env:
+        CI: true
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    - name: Lint
+      run: npm run lint
+      env:
+        CI: true
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    - name: Build
+      uses: JamesIves/github-pages-deploy-action@releases/v3
+    - name: Publish
+      with:
+        ACCESS_TOKEN: ${{ secrets.GH_TOKEN }}
+        BASE_BRANCH: master # The branch the action should deploy from.
+        BRANCH: gh-pages # The branch the action should deploy to.
+        FOLDER: dist # The folder the action should deploy.
