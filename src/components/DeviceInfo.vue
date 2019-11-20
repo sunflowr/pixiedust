@@ -142,6 +142,10 @@ export default {
             (data[i++] << 16) |
             (data[i++] << 24)) >>>
           0; // UInt32
+        if(ver.magic != 0xac1dca78){
+          this.receiveStatus = "Unrecognized device data, this is not a RE-CPU your talking to.";
+          return;
+        }
         ver.hwid =
           (data[i++] |
             (data[i++] << 8) |
