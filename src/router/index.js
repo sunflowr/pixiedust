@@ -37,7 +37,7 @@ const routes = [
             index: 2,
             icon: 'mdi-file-export',
             title: 'SysEx Tool',
-            accelerator: "CmdOrCtrl+C"
+            accelerator: "CmdOrCtrl+S"
         },
         // route level code-splitting
         // this generates a separate chunk (about.[hash].js) for this route

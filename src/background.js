@@ -33,7 +33,7 @@ function setMainMenu() {
                 },
                 {
                     label: "SysEx tool",
-                    accelerator: "CmdOrCtrl+C",
+                    accelerator: "CmdOrCtrl+S",
                     click() {
                         win.webContents.send("navigate", "/sysextool");
                     }
