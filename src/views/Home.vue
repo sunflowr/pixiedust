@@ -90,7 +90,7 @@ export default {
   <v-container fluid>
     <v-row>
       <v-col cols="12">
-        <DeviceInfo :data="deviceInfo" />
+        <DeviceInfo :data="deviceInfo" :info="1" />
       </v-col>
     </v-row>
     <v-row>
