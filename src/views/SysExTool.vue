@@ -17,7 +17,7 @@
       placeholder="Select a file to convert"
       @change="onFileChange"
     />
-    <div v-if="fileTest">{{ fileTest }}</div>
+    <div v-if="fileTest">File identified as: {{ fileTest }}</div>
     <v-btn color="primary" :disabled="inputFile == null" large @click="convert">Convert</v-btn>
     <v-dialog v-model="convertDialog" persistent max-width="640px">
       <v-card>
