@@ -17,10 +17,24 @@ const routes = [
         component: Home
     },
     {
+        path: '/device',
+        name: 'device',
+        meta: {
+            index: 1,
+            icon: 'mdi-view-dashboard',
+            title: 'Device',
+            accelerator: "CmdOrCtrl+R"
+        },
+        // route level code-splitting
+        // this generates a separate chunk (about.[hash].js) for this route
+        // which is lazy-loaded when the route is visited.
+        component: () => import(/* webpackChunkName: "about" */ '../views/Device.vue')
+    },
+    {
         path: '/midiupload',
         name: 'midiupload',
         meta: {
-            index: 1,
+            index: 2,
             icon: 'mdi-download',
             title: 'Send to device',
             accelerator: "CmdOrCtrl+U"
@@ -34,7 +48,7 @@ const routes = [
         path: '/sysextool',
         name: 'sysextool',
         meta: {
-            index: 2,
+            index: 3,
             icon: 'mdi-file-export',
             title: 'SysEx Tool',
             accelerator: "CmdOrCtrl+S"
@@ -48,7 +62,7 @@ const routes = [
         path: '/settings',
         name: 'settings',
         meta: {
-            index: 3,
+            index: 4,
             icon: 'mdi-settings',
             title: 'Settings',
             accelerator: 'Cmd+,'
@@ -62,7 +76,7 @@ const routes = [
         path: '/about',
         name: 'about',
         meta: {
-            index: 4,
+            index: 5,
             icon: 'mdi-information',
             title: 'About'
         },

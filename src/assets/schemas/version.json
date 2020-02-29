@@ -1,0 +1,33 @@
+{
+  "types": {
+    "bool": {
+      "size": 1,
+      "type": "boolean"
+    },
+    "namestring": {
+      "size": 24,
+      "type": "string"
+    },
+    "uint8": {
+      "size": 1,
+      "type": "number"
+    },
+    "uint16": {
+      "size": 2,
+      "type": "number"
+    },
+    "uint32": {
+      "size": 4,
+      "type": "number"
+    }
+  },
+  "version": {
+    "magic": "uint32",
+    "hardwareId": "uint32",
+    "name": "string24",
+    "major": "uint8",
+    "minor": "uint8",
+    "patch": "uint8",
+    "revision": "uint16"
+  }
+}

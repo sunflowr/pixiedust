@@ -39,6 +39,8 @@
 </template>
 
 <script>
+import { mapGetters } from "vuex";
+
 export default {
   name: "MidiUpload",
   data() {
@@ -50,22 +52,14 @@ export default {
     };
   },
   computed: {
-    settings: {
-      get() {
-        return this.$Settings;
-      }
+    ...mapGetters(["settings"]),
+    midiOutDevice() {
+      return this.$MIDI.webMidi.getOutputById(this.settings.midiOutputDevice);
     },
-    midiOutDevice: {
-      get() {
-        return this.$MIDI.webMidi.getOutputById(this.settings.midiOutputDevice);
-      }
-    },
-    midiOutDeviceName: {
-      get() {
-        return (
-          this.midiOutDevice.name || "&lt;no midi output device selected&gt;"
-        );
-      }
+    midiOutDeviceName() {
+      return (
+        this.midiOutDevice.name || "&lt;no midi output device selected&gt;"
+      );
     },
     uploadProgress: {
       get() {
@@ -116,7 +110,27 @@ export default {
         }
 
         // Upload SysEx.
-        that.delayUploadSysEx(that.settings.uploadDelay, sysExDataTracks, 0);
+        for (let i = 0; i < sysExDataTracks.length; ++i) {
+          const uploadDelay = "+" + (i * that.settings.uploadDelay).toString();
+          /* eslint-disable no-console */
+          console.log(uploadDelay);
+          /* eslint-enable no-console */
+          that.uploadProgressData = Math.trunc(
+            (100 * (i + 1)) / sysExDataTracks.length
+          );
+          that.midiOutDevice.sendSysex(0x7d, Array.from(sysExDataTracks[i]), {
+            time: uploadDelay
+          });
+        }
+
+        if (!that.midiOutDevice) {
+          that.uploadStatus = "No active midi output device, aborting!";
+        } else {
+          that.uploadStatus = "Done uploading";
+        }
+        that.inputFile = null;
+        that.uploadProgress = 100;
+        //that.delayUploadSysEx(that.settings.uploadDelay, sysExDataTracks, 0);
       };
       fileReader.readAsArrayBuffer(file);
     },

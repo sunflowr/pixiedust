@@ -1,7 +1,6 @@
 import WebMidi from "webmidi";
 
 export let _Vue;
-export let midiAccess;
 
 export function install(Vue) {
     if (install.installed && _Vue === Vue) {
@@ -17,7 +16,10 @@ export function install(Vue) {
                 enabled: false,
                 webMidi: null,
                 inputDevices: [],
-                outputDevices: []
+                outputDevices: [],
+                uploadStatus: "",
+                uploading: false,
+                uploadProgress: 0
             }
         },
         created() {
@@ -71,6 +73,34 @@ export function install(Vue) {
                             id: this.webMidi.outputs[i].id,
                             name: this.webMidi.outputs[i].name,
                         });
+                    }
+                }
+            },
+            sendSysEx(midiOutDevice, sysExDataTracks, uploadDelay, onProgress, onResolve, onReject) {
+                if (!this.uploading) {
+                    this.uploading = true;
+                    this.delaySendSysEx(midiOutDevice, uploadDelay, sysExDataTracks, 0, onProgress, onResolve, onReject);
+                } else {
+                    onReject("Busy uplading.");
+                }
+            },
+            delaySendSysEx(midiOutDevice, delayMs, tracks, currentTrack, onProgress, onResolve, onReject) {
+                const that = this;
+                that.uploadProgressData = Math.trunc((currentTrack + 1)) / tracks.length;
+
+                if (midiOutDevice && currentTrack < tracks.length) {
+                    midiOutDevice.sendSysex(0x7d, Array.from(tracks[currentTrack]));
+                    setTimeout(() => {
+                        onProgress(currentTrack / tracks.length);
+                        (31268 / 8)
+                        that.delaySendSysEx(midiOutDevice, delayMs, tracks, currentTrack + 1, onProgress, onResolve, onReject);
+                    }, delayMs);
+                } else {
+                    that.uploading = false;
+                    if (!midiOutDevice) {
+                        typeof onReject === "function" && onReject("No active midi output device, aborting!");
+                    } else {
+                        typeof onResolve === "function" && onResolve();
                     }
                 }
             },

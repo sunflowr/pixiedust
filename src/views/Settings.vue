@@ -29,68 +29,69 @@
       <v-row class="mb-4" justify="space-between">
         <v-col class="text-left subheading font-weight-light">
           <span>MIDI port:</span>
-          <span v-text="settings.midiPort" />
+          <span v-text="midiPort" />
         </v-col>
       </v-row>
-      <v-slider v-model="settings.midiPort" always-dirty min="1" max="16" />
+      <v-slider v-model="midiPort" always-dirty min="1" max="16" />
 
       <v-row class="mb-4" justify="space-between">
         <v-col class="text-left subheading font-weight-light">
           <span>Pause&nbsp;</span>
-          <span v-text="settings.uploadDelay" />
+          <span v-text="uploadDelay" />
           <span>&nbsp;ms between messages</span>
         </v-col>
       </v-row>
-      <v-slider v-model="settings.uploadDelay" always-dirty min="1" max="1000" />
+      <v-slider v-model="uploadDelay" always-dirty min="1" max="1000" />
     </v-card-text>
   </v-card>
 </template>
 
 <script>
+import { mapGetters } from "vuex";
+
 export default {
   name: "Settings",
   computed: {
-    settings: {
+    ...mapGetters(["settings"]),
+    inputDevices() {
+      return this.$MIDI.inputDevices.map(x => {
+        return { text: x.name, value: x.id };
+      });
+    },
+    outputDevices() {
+      return this.$MIDI.outputDevices.map(x => {
+        return { text: x.name, value: x.id };
+      });
+    },
+    selectedInputDevice() {
+      return this.settings.midiInputDevice || "";
+    },
+    selectedOutputDevice() {
+      return this.settings.midiOutputDevice || "";
+    },
+    midiPort: {
       get() {
-        return this.$Settings;
+        return this.settings.midiPort;
+      },
+      set(value) {
+        this.$store.dispatch("setMidiPort", value);
       }
     },
-    midi: {
+    uploadDelay: {
       get() {
-        return this.$MIDI;
-      }
-    },
-    inputDevices: {
-      get() {
-        return this.midi.inputDevices.map(x => {
-          return { text: x.name, value: x.id };
-        });
-      }
-    },
-    outputDevices: {
-      get() {
-        return this.midi.outputDevices.map(x => {
-          return { text: x.name, value: x.id };
-        });
-      }
-    },
-    selectedInputDevice: {
-      get() {
-        return this.settings.midiInputDevice || "";
-      }
-    },
-    selectedOutputDevice: {
-      get() {
-        return this.settings.midiOutputDevice || "";
+        return this.settings.uploadDelay;
+      },
+      set(value) {
+        this.$store.dispatch("setMidiUploadDelay", value);
       }
     }
   },
   methods: {
     midiInputDeviceChanged(deviceId) {
-      this.settings.midiInputDevice = deviceId;
+      this.$store.dispatch("setMidiInputDevice", deviceId);
     },
     midiOutputDeviceChanged(deviceId) {
-      this.settings.midiOutputDevice = deviceId;
+      this.$store.dispatch("setMidiOutputDevice", deviceId);
     }
   }
 };

@@ -17,10 +17,12 @@
     <v-card-text>
       <div v-if="receiveStatus != null && receiveStatus.length > 0">{{ receiveStatus }}</div>
       <div v-if="uploadStatus != null && uploadStatus.length > 0">{{ uploadStatus }}</div>
-      <div v-if="deviceInfo2">
+      <div v-if="device">
         <ul>
-          <li>App Version: {{ deviceInfo2.version.major }}.{{ deviceInfo2.version.minor }}.{{ deviceInfo2.version.patch }}</li>
-          <li>App Name: {{ deviceInfo2.version.name }}</li>
+          <li>Bootloader Version: {{ device.bootloaderVersion.major }}.{{ device.bootloaderVersion.minor }}.{{ device.bootloaderVersion.patch }}</li>
+          <li>Bootloader Name: {{ device.bootloaderVersion.name }}</li>
+          <li>App Version: {{ device.appVersion.major }}.{{ device.appVersion.minor }}.{{ device.appVersion.patch }}</li>
+          <li>App Name: {{ device.appVersion.name }}</li>
         </ul>
       </div>
     </v-card-text>
@@ -28,7 +30,9 @@
 </template>
 
 <script>
-import { sysExUtil } from "@/plugins/sysexutil";
+import { mapGetters } from "vuex";
+import { sysExMessages } from "@/SysExMessages";
+import { Version } from "@/version";
 
 export default {
   name: "DeviceInfo",
@@ -41,126 +45,70 @@ export default {
       syncing: false,
       uploadStatus: "",
       receiveStatus: "",
-      deviceInfo2: null
     };
   },
   mounted() {
-    if (this.midiInDevice) {
-      this.midiInDevice.addListener("sysex", undefined, this.onSysExReceive);
-    }
+    /* eslint-disable no-unused-vars */
+    /* eslint-disable no-console */
+    this.$store.subscribeAction({
+      after: (action, state) => {
+        //console.log(`after action ${action.type}`);
+        //console.log(state);
+      }
+    });
+    /* eslint-enable no-console */
+    /* eslint-enable no-unused-vars */
+    sysExMessages.DataResponse_Version.addListener(this.onVersion);
+  },
+  beforeDestroy() {
+    sysExMessages.DataResponse_Version.removeListener(this.onVersion);
   },
   computed: {
-    settings: {
-      get() {
-        return this.$Settings;
+    ...mapGetters(["settings"]),
+    ...mapGetters(["device"]),
+    midiOutDevice() {
+      if (this.$MIDI && this.$MIDI.webMidi) {
+        return this.$MIDI.webMidi.getOutputById(this.settings.midiOutputDevice);
       }
-    },
-    midiOutDevice: {
-      get() {
-        if (this.$MIDI && this.$MIDI.webMidi) {
-          return this.$MIDI.webMidi.getOutputById(
-            this.settings.midiOutputDevice
-          );
-        }
-        return null;
-      }
-    },
-    midiInDevice: {
-      get() {
-        if (this.$MIDI && this.$MIDI.webMidi) {
-          return this.$MIDI.webMidi.getInputById(this.settings.midiInputDevice);
-        }
-        return null;
-      }
+      return null;
     }
   },
   methods: {
+    onVersion(header, packetIndex, data) {
+      if (packetIndex == 0) {
+        const version = new Version(data);
+        if (this.info == 0) {
+          this.$store.dispatch("setDeviceBootloaderVersion", version);
+        } else if (this.info == 1) {
+          this.$store.dispatch("setDeviceAppVersion", version);
+        }
+        this.syncing = false;
+        this.uploadStatus = "ok";
+      }
+    },
     syncDeviceInfo() {
       this.syncing = true;
-
-      this.uploadSysEx([
-        new Uint8Array([0x03, 0x03, 0x7c, (this.info & 0xff) >>> 0])
-      ]);
-
       const that = this;
-      setTimeout(() => {
-        if (that.syncing) {
-          that.receiveStatus =
-            "No RE-CPU detected, plesae check MIDI device settings and connection.";
-          that.syncing = false;
-        }
-      }, 1000);
-    },
-    uploadSysEx(sysExDataTracks) {
-      this.delayUploadSysEx(this.settings.uploadDelay, sysExDataTracks, 0);
-    },
-    delayUploadSysEx(delayMs, tracks, currentTrack) {
-      let that = this;
-      if (this.midiOutDevice && currentTrack < tracks.length) {
-        this.midiOutDevice.sendSysex(0x7d, Array.from(tracks[currentTrack]));
-        setTimeout(() => {
-          that.delayUploadSysEx(delayMs, tracks, currentTrack + 1);
-        }, delayMs);
-      } else {
-        if (!this.midiOutDevice) {
-          this.uploadStatus = "No active midi output device, aborting!";
-        } else {
-          this.uploadStatus = "";
-        }
-      }
-    },
-    onSysExReceive(e) {
-      this.syncing = false;
-      const sdata = e.data.slice(7, e.data.length - 1);
-      if (sdata.length % 2 != 0) {
-        this.receiveStatus =
-          "SysEx data length is uneven, the received data is most likely corrupt.";
-        return;
-      }
-
-      const data = sysExUtil.denibbelize(sdata);
-      if (data.length > 1) {
-        const checksum = data[data.length - 1];
-
-        // Verify data using checksum.
-        let dataChecksum = 0;
-        for (let j = 0; j < data.length - 1; ++j) {
-          dataChecksum = (dataChecksum + data[j]) & 0xff; // Expected to be a UInt8 value.
-        }
-
-        if (checksum != dataChecksum) {
-          this.receiveStatus = "Error when reciving, data is corrupt.";
-        }
-
-        //this.uploadStatus = data;
-
-        let i = 0;
-        const ver = {};
-        ver.magic =
-          (data[i++] |
-            (data[i++] << 8) |
-            (data[i++] << 16) |
-            (data[i++] << 24)) >>>
-          0; // UInt32
-        if(ver.magic != 0xac1dca78){
-          this.receiveStatus = "Unrecognized device data, this is not a RE-CPU your talking to.";
-          return;
-        }
-        ver.hwid =
-          (data[i++] |
-            (data[i++] << 8) |
-            (data[i++] << 16) |
-            (data[i++] << 24)) >>>
-          0; // UInt32
-        ver.name = new TextDecoder("utf-8").decode(data.slice(i, i + 24)); // char[24]
-        i += 24;
-        ver.major = data[i++]; // UInt8
-        ver.minor = data[i++]; // UInt8
-        ver.patch = data[i++]; // UInt8
-        ver.revision = data[i++]; // UInt16
-        this.deviceInfo2 = {
-          version: ver
-        };
+      if (this.$MIDI && this.$MIDI.webMidi) {
+        this.$MIDI.sendSysEx(
+          this.midiOutDevice,
+          [new Uint8Array([0x03, 0x03, 0x7c, (this.info & 0xff) >>> 0])],
+          this.settings.uploadDelay,
+          () => {},
+          () => {
+            setTimeout(() => {
+              if (that.syncing) {
+                that.receiveStatus =
+                  "No RE-CPU detected, plesae check MIDI device settings and connection.";
+                that.syncing = false;
+              }
+            }, 2000);
+          },
+          error => {
+            that.receiveStatus = error;
+            that.syncing = false;
+          }
+        );
       }
     }
   }

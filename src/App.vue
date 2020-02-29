@@ -63,6 +63,10 @@
 </template>
 
 <script>
+import { mapGetters } from "vuex";
+import sysExHandler from "@/SysExHandler";
+import { sysExMessages } from "@/SysExMessages";
+
 export default {
   name: "App",
   data: () => ({
@@ -73,23 +77,50 @@ export default {
     this.$vuetify.theme.dark = true;
   },
   mounted() {
-    const { ipcRenderer } = require("electron");
-    if (ipcRenderer) {
-      /* eslint-disable no-unused-vars */
-      ipcRenderer.on("navigate", (e, routePath) => {
-        if (this.$route.path !== routePath) {
-          this.$router.push(routePath);
-        }
-      });
-      /* eslint-enable no-unused-vars */
+    if (this.isElectronApp()) {
+      const { ipcRenderer } = require("electron");
+      if (ipcRenderer) {
+        /* eslint-disable no-unused-vars */
+        ipcRenderer.on("navigate", (e, routePath) => {
+          if (this.$route.path !== routePath) {
+            this.$router.push(routePath);
+          }
+        });
+        /* eslint-enable no-unused-vars */
+      }
     }
     this.$MIDI.$on("midi:initialized", this.midiInitialized);
     this.$MIDI.$on("midi:failed", this.midiFailed);
     this.$MIDI.$on("midi:connected", this.midiConnected);
     this.$MIDI.$on("midi:disconnected", this.midiDisconnected);
     //this.midiInitialized();
+
+    /* eslint-disable no-unused-vars */
+    this.$store.subscribeAction({
+      before: (action, state) => {
+        if (action.type === "setMidiInputDevice" && this.midiInDevice) {
+          this.midiInDevice.removeListener(
+            "sysex",
+            undefined,
+            this.onMidiSysExReceive
+          );
+        }
+      },
+      after: (action, state) => {
+        if (action.type === "setMidiInputDevice" && this.midiInDevice) {
+          this.midiInDevice.addListener(
+            "sysex",
+            undefined,
+            this.onMidiSysExReceive
+          );
+        }
+      }
+    });
+    /* eslint-enable no-unused-vars */
   },
   computed: {
+    ...mapGetters(["settings"]),
+    ...mapGetters(["device"]),
     routes() {
       return this.$router.options.routes;
     },
@@ -98,18 +129,24 @@ export default {
     },
     currentRouteName() {
       return this.$route.meta.title;
+    },
+    midiOutDevice() {
+      if (this.$MIDI && this.$MIDI.webMidi) {
+        return this.$MIDI.webMidi.getOutputById(this.settings.midiOutputDevice);
+      }
+      return null;
+    },
+    midiInDevice() {
+      if (this.$MIDI && this.$MIDI.webMidi) {
+        return this.$MIDI.webMidi.getInputById(this.settings.midiInputDevice);
+      }
+      return null;
     }
   },
   methods: {
     /* eslint-disable no-unused-vars */
     midiInitialized(msg) {
-      if (!this.$Settings.midiInputDevice) {
-        this.$Settings.midiInputDevice = this.$MIDI.inputDevices[0].id || "";
-        this.midiInputDeviceChanged();
-      }
-      if (!this.$Settings.midiOutputDevice) {
-        this.$Settings.midiOutputDevice = this.$MIDI.outputDevices[0].id || "";
-      }
+      this.midiSetDefaultDeviceIfEmpty();
     },
     /* eslint-enable no-unused-vars */
     midiFailed(msg) {
@@ -118,30 +155,76 @@ export default {
         text: msg
       };
     },
+    midiSetInputDevice(deviceId) {
+      this.$store.dispatch("setMidiInputDevice", deviceId);
+    },
+    midiSetOutputDevice(deviceId) {
+      this.$store.dispatch("setMidiOutputDevice", deviceId);
+    },
+    midiSetDefaultDeviceIfEmpty() {
+      if (!this.settings.midiInputDevice) {
+        this.midiSetInputDevice(this.$MIDI.inputDevices[0].id || "");
+      }
+      if (!this.settings.midiOutputDevice) {
+        this.midiSetOutputDevice(this.$MIDI.outputDevices[0].id || "");
+      }
+    },
     /* eslint-disable no-unused-vars */
-    midiConnected(ev) {},
+    midiConnected(ev) {
+      this.midiSetDefaultDeviceIfEmpty();
+    },
     /* eslint-enable no-unused-vars */
     midiDisconnected(ev) {
-      if (ev.port.id === this.$Settings.midiInputDevice) {
-        this.$Settings.midiInputDevice = this.$MIDI.inputDevices[0].id || "";
+      if (ev.port.id === this.settings.midiInputDevice) {
+        this.$store.dispatch(
+          "setMidiInputDevice",
+          this.$MIDI.inputDevices[0].id || ""
+        );
       }
-      if (ev.port.id === this.$Settings.midiOutputDevice) {
-        this.$Settings.midiOutputDevice = this.$MIDI.outputDevices[0].id || "";
+      if (ev.port.id === this.settings.midiOutputDevice) {
+        this.$store.dispatch(
+          "setMidiOutputDevice",
+          this.$MIDI.outputDevices[0].id || ""
+        );
       }
+      this.midiSetDefaultDeviceIfEmpty();
     },
     /* eslint-disable no-unused-vars */
-    midiSysExReceived(ev) {},
-    /* eslint-enable no-unused-vars */
-    midiInputDeviceChanged() {
-      /*if (this.$Settings.midiInputDevice) {
-        this.$Settings.midiInputDevice.addListener(
-          "sysex",
-          undefined,
-          this.midiSysExReceived
-        );
-      }*/
+    onMidiSysExReceive(ev) {
+      this.$router.app.$emit("sysex-receive", ev);
+      sysExHandler.onSysEx(ev.data, sysExMessages);
     },
-    midiOutputDeviceChanged() {}
+    /* eslint-enable no-unused-vars */
+    isElectronApp() {
+      // Renderer process
+      if (
+        typeof window !== "undefined" &&
+        typeof window.process === "object" &&
+        window.process.type === "renderer"
+      ) {
+        return true;
+      }
+
+      // Main process
+      if (
+        typeof process !== "undefined" &&
+        typeof process.versions === "object" &&
+        !!process.versions.electron
+      ) {
+        return true;
+      }
+
+      // Detect the user agent when the `nodeIntegration` option is set to true
+      if (
+        typeof navigator === "object" &&
+        typeof navigator.userAgent === "string" &&
+        navigator.userAgent.toLowerCase().indexOf(" electron/") >= 0
+      ) {
+        return true;
+      }
+
+      return false;
+    }
   }
 };
 </script>

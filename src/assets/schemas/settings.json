@@ -1,0 +1,28 @@
+{
+  "types": {
+    "bool": {
+      "size": 1,
+      "type": "boolean"
+    },
+    "uint8": {
+      "size": 1,
+      "type": "number"
+    }
+  },
+  "versions": [
+    {
+      "version": "1.1.1",
+      "settings": [
+        {
+          "isSyncMaster": "bool",
+          "remoteMode": "bool",
+          "sendNotes": "bool",
+          "transposeOnNoteIn": "bool",
+          "patternChangeOnNoteIn": "bool",
+          "midiChannelIn": "uint8",
+          "midiChannelOut": "uint8"
+        }
+      ]
+    }
+  ]
+}
