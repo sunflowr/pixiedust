@@ -1,5 +1,4 @@
 <script>
-//import settingsSchema from "@/assets/schemas/settings.json";
 import DeviceInfo from "@/components/DeviceInfo.vue";
 import { mapGetters } from "vuex";
 

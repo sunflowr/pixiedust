@@ -1,28 +1,51 @@
 {
-  "types": {
-    "bool": {
-      "size": 1,
-      "type": "boolean"
-    },
-    "uint8": {
-      "size": 1,
-      "type": "number"
+  "versions": {
+    "1.1.1": {
+      "magic": {
+        "type": "uint32",
+        "default": 0
+      },
+      "versionMajor": {
+        "type": "uint8",
+        "default": 0
+      },
+      "versionMinor": {
+        "type": "uint8",
+        "default": 0
+      },
+      "versionPatch": {
+        "type": "uint8",
+        "default": 0
+      },
+      "isSyncMaster": {
+        "type": "bool",
+        "default": false
+      },
+      "remoteMode": {
+        "type": "bool",
+        "default": false
+      },
+      "sendNotes": {
+        "type": "bool",
+        "default": false
+      },
+      "transposeOnNoteIn": {
+        "type": "bool",
+        "default": false
+      },
+      "patternChangeOnNoteIn": {
+        "type": "bool",
+        "default": false
+      },
+      "midiChannelIn": {
+        "type": "uint8",
+        "default": false
+      },
+      "midiChannelOut": {
+        "type": "uint8",
+        "default": false
+      }
     }
   },
-  "versions": [
-    {
-      "version": "1.1.1",
-      "settings": [
-        {
-          "isSyncMaster": "bool",
-          "remoteMode": "bool",
-          "sendNotes": "bool",
-          "transposeOnNoteIn": "bool",
-          "patternChangeOnNoteIn": "bool",
-          "midiChannelIn": "uint8",
-          "midiChannelOut": "uint8"
-        }
-      ]
-    }
-  ]
+  "latest": "1.1.1"
 }

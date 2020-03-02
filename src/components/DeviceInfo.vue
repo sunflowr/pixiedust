@@ -6,8 +6,8 @@
       <v-btn
         color="secondary"
         x-small
-        :disabled="syncing"
-        :loading="syncing"
+        :disabled="syncRequest"
+        :loading="syncRequest"
         @click="syncDeviceInfo"
       >
         <v-icon left>mdi-refresh</v-icon>Sync
@@ -33,6 +33,7 @@
 import { mapGetters } from "vuex";
 import { sysExMessages } from "@/SysExMessages";
 import { Version } from "@/version";
+import { Settings } from "@/settings";
 
 export default {
   name: "DeviceInfo",
@@ -42,9 +43,9 @@ export default {
   },
   data() {
     return {
-      syncing: false,
+      syncRequest: null,
       uploadStatus: "",
-      receiveStatus: "",
+      receiveStatus: ""
     };
   },
   mounted() {
@@ -59,9 +60,11 @@ export default {
     /* eslint-enable no-console */
     /* eslint-enable no-unused-vars */
     sysExMessages.DataResponse_Version.addListener(this.onVersion);
+    sysExMessages.DataResponse_Settings.addListener(this.onSettings);
   },
   beforeDestroy() {
     sysExMessages.DataResponse_Version.removeListener(this.onVersion);
+    sysExMessages.DataResponse_Settings.removeListener(this.onSettings);
   },
   computed: {
     ...mapGetters(["settings"]),
@@ -75,38 +78,76 @@ export default {
   },
   methods: {
     onVersion(header, packetIndex, data) {
-      if (packetIndex == 0) {
-        const version = new Version(data);
-        if (this.info == 0) {
-          this.$store.dispatch("setDeviceBootloaderVersion", version);
-        } else if (this.info == 1) {
-          this.$store.dispatch("setDeviceAppVersion", version);
+      if (this.syncRequest && packetIndex === 0) {
+        switch (this.syncRequest.receive++) {
+          case 0:
+            this.$store.dispatch(
+              "setDeviceBootloaderVersion",
+              new Version(data)
+            );
+            break;
+          case 1:
+            this.$store.dispatch("setDeviceAppVersion", new Version(data));
+            break;
+          default:
+            this.clearSyncRequest();
+            this.uploadStatus = "wtf";
+            break;
         }
-        this.syncing = false;
-        this.uploadStatus = "ok";
+      }
+    },
+    onSettings(header, packetIndex, data) {
+      if (this.syncRequest && packetIndex === 0) {
+        switch (this.syncRequest.receive++) {
+          case 2:
+            this.$store.dispatch("setDeviceSettings", new Settings(data));
+            this.clearSyncRequest();
+            this.uploadStatus = "ok";
+            break;
+          default:
+            this.clearSyncRequest();
+            this.uploadStatus = "wtf";
+            break;
+        }
+      }
+    },
+    onSyncTimedOut() {
+      this.receiveStatus =
+        "No RE-CPU detected, plesae check MIDI device settings and connection.";
+      this.clearSyncRequest();
+    },
+    clearSyncRequest() {
+      if (this.syncRequest) {
+        clearTimeout(this.syncRequest.timeout);
+        this.syncRequest = null;
       }
     },
     syncDeviceInfo() {
-      this.syncing = true;
       const that = this;
       if (this.$MIDI && this.$MIDI.webMidi) {
+        this.syncRequest = {
+          tracks: [
+            new Uint8Array([0x03, 0x03, 0x7c, 0x00]),
+            new Uint8Array([0x03, 0x03, 0x7c, 0x01]),
+            new Uint8Array([0x03, 0x03, 0x7d, 0x02])
+          ],
+          timeout: setTimeout(this.onSyncTimedOut, 2000),
+          receive: 0
+        };
         this.$MIDI.sendSysEx(
           this.midiOutDevice,
-          [new Uint8Array([0x03, 0x03, 0x7c, (this.info & 0xff) >>> 0])],
+          this.syncRequest.tracks,
           this.settings.uploadDelay,
-          () => {},
           () => {
-            setTimeout(() => {
-              if (that.syncing) {
-                that.receiveStatus =
-                  "No RE-CPU detected, plesae check MIDI device settings and connection.";
-                that.syncing = false;
-              }
-            }, 2000);
+            // Progress.
+          },
+          () => {
+            // Resolve.
           },
           error => {
+            // Reject.
             that.receiveStatus = error;
-            that.syncing = false;
+            that.clearSyncRequest();
           }
         );
       }

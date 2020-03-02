@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import { Version } from "@/version";
-//import { Settings } from "@/settings";
+import { Settings } from "@/settings";
 
 Vue.use(Vuex)
 
@@ -17,8 +17,7 @@ const DEFAULT_SETTINGS = {
 const DEFAULT_DEVICE = {
   bootloaderVersion: new Version(),
   appVersion: new Version(),
-  Settings: {
-  }
+  settings: new Settings()
 };
 
 export default new Vuex.Store({
@@ -68,12 +67,16 @@ export default new Vuex.Store({
       const settings = { ...state.settings, uploadDelay: uploadDelay }
       commit('updateSettings', settings);
     },
-    setDeviceBootloaderVersion({ commit, state}, version){
+    setDeviceBootloaderVersion({ commit, state }, version) {
       const device = { ...state.device, bootloaderVersion: version }
       commit('updateDevice', device);
     },
-    setDeviceAppVersion({ commit, state}, version){
+    setDeviceAppVersion({ commit, state }, version) {
       const device = { ...state.device, appVersion: version }
+      commit('updateDevice', device);
+    },
+    setDeviceSettings({ commit, state }, settings) {
+      const device = { ...state.device, settings: settings }
       commit('updateDevice', device);
     }
   },
