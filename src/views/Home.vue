@@ -1,13 +1,11 @@
 <script>
 import axios from "axios";
 import GitHubReleaseCard from "@/components/GitHubReleaseCard.vue";
-import DeviceInfo from "@/components/DeviceInfo.vue";
 
 export default {
   name: "Home",
   components: {
-    GitHubReleaseCard,
-    DeviceInfo
+    GitHubReleaseCard
   },
   mounted() {
     this.sendReq(
@@ -88,14 +86,6 @@ export default {
 
 <template>
   <v-container fluid>
-    <v-row>
-      <v-col cols="12">
-        <DeviceInfo :data="deviceInfo" :info="0" />
-      </v-col>
-      <v-col cols="12">
-        <DeviceInfo :data="deviceInfo" :info="1" />
-      </v-col>
-    </v-row>
     <v-row>
       <v-col cols="12">
         <v-card class="mx-auto" max-width="600px">

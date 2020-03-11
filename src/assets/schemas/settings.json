@@ -18,32 +18,61 @@
         "default": 0
       },
       "isSyncMaster": {
+        "name": "Device is master",
+        "desc": "Device sends or listen to start/stop and clock messages",
         "type": "bool",
-        "default": false
+        "default": false,
+        "view": "checkbox"
       },
       "remoteMode": {
+        "name": "Remote mode",
+        "desc": "Use device as a MIDI sound source",
         "type": "bool",
-        "default": false
+        "default": false,
+        "view": "checkbox"
       },
       "sendNotes": {
+        "name": "Send notes",
+        "desc": "Send notes from sequencer while playing",
         "type": "bool",
-        "default": false
+        "default": false,
+        "view": "checkbox"
       },
       "transposeOnNoteIn": {
+        "name": "Transpose on note",
+        "desc": "Transpose pattern when a MIDI note is played",
         "type": "bool",
-        "default": false
+        "default": false,
+        "view": "checkbox"
       },
       "patternChangeOnNoteIn": {
+        "name": "Change pattern on note",
+        "desc": "Change pattern when a MIDI note is played",
         "type": "bool",
-        "default": false
+        "default": false,
+        "view": "checkbox"
       },
       "midiChannelIn": {
+        "name": "MIDI channel in",
+        "desc": "MIDI channel in",
         "type": "uint8",
-        "default": false
+        "default": 1,
+        "view": "range",
+        "range": [
+          1,
+          16
+        ]
       },
       "midiChannelOut": {
+        "name": "MIDI channel out",
+        "desc": "MIDI channel out",
         "type": "uint8",
-        "default": false
+        "default": 1,
+        "view": "range",
+        "range": [
+          1,
+          16
+        ]
       }
     }
   },

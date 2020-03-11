@@ -1,7 +1,21 @@
 <template>
   <v-app>
+    <v-app-bar app dark flat clipped-left elevation="2">
+      <v-tabs icons-and-text show-arrows>
+        <v-tab
+          v-for="route in $router.options.routes"
+          v-bind:key="route.meta.index"
+          link
+          :to="route.path"
+        >
+          {{ route.meta.title }}
+          <v-icon>{{ route.meta.icon }}</v-icon>
+        </v-tab>
+      </v-tabs>
+    </v-app-bar>
+
     <!-- v-model="drawer" -->
-    <v-navigation-drawer :mini-variant="!expandedMenu" app permanent>
+    <!--<v-navigation-drawer :mini-variant="!expandedMenu" app permanent>
       <v-list dense>
         <v-tooltip :disabled="expandedMenu" right>
           <template #activator="{ on }">
@@ -37,27 +51,15 @@
           <span>{{ route.meta.title }}</span>
         </v-tooltip>
       </v-list>
-    </v-navigation-drawer>
+    </v-navigation-drawer>-->
 
     <!-- v-slot:extension-->
-    <v-app-bar app dense title flat color="#303030">
+    <!--<v-app-bar app dense title flat color="#303030">
       <v-toolbar-title>{{ currentRouteName }}</v-toolbar-title>
-      <!--<template v-slot:default>
-        <v-tabs align-with-title show-arrows background-color="transparent">
-          <v-tabs-slider />
-          <v-tab to="/">Home</v-tab>
-          <v-tab to="/sysextool">SysEx Tool</v-tab>
-          <v-tab to="/settings">Settings</v-tab>
-          <v-tab to="/about">About</v-tab>
-          <v-tab>Item Three</v-tab>
-        </v-tabs>
-      </template>-->
-    </v-app-bar>
+    </v-app-bar>-->
 
     <v-content>
-      <v-container>
-        <router-view />
-      </v-container>
+      <router-view />
     </v-content>
   </v-app>
 </template>
@@ -65,7 +67,7 @@
 <script>
 import { mapGetters } from "vuex";
 import sysExHandler from "@/SysExHandler";
-import { sysExMessages } from "@/SysExMessages";
+import { sysExMessageDescs } from "@/SysExMessages";
 
 export default {
   name: "App",
@@ -192,7 +194,7 @@ export default {
     /* eslint-disable no-unused-vars */
     onMidiSysExReceive(ev) {
       this.$router.app.$emit("sysex-receive", ev);
-      sysExHandler.onSysEx(ev.data, sysExMessages);
+      sysExHandler.onSysEx(ev.data, sysExMessageDescs);
     },
     /* eslint-enable no-unused-vars */
     isElectronApp() {

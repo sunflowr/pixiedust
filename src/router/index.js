@@ -10,7 +10,7 @@ const routes = [
         name: 'home',
         meta: {
             index: 0,
-            icon: 'mdi-view-dashboard',
+            icon: 'mdi-home',
             title: 'Home',
             accelerator: "CmdOrCtrl+I"
         },
@@ -21,7 +21,7 @@ const routes = [
         name: 'device',
         meta: {
             index: 1,
-            icon: 'mdi-view-dashboard',
+            icon: 'mdi-alien',
             title: 'Device',
             accelerator: "CmdOrCtrl+R"
         },

@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-import { Version } from "@/version";
-import { Settings } from "@/settings";
+//import { Version } from "@/version";
+//import { Settings } from "@/settings";
 
 Vue.use(Vuex)
 
@@ -14,16 +14,16 @@ const DEFAULT_SETTINGS = {
 };
 
 // TODO: Make disconnect state.
-const DEFAULT_DEVICE = {
+/*const DEFAULT_DEVICE = {
   bootloaderVersion: new Version(),
   appVersion: new Version(),
   settings: new Settings()
-};
+};*/
 
 export default new Vuex.Store({
   state: {
     settings: JSON.parse(window.localStorage.getItem(STORAGE_KEY) || JSON.stringify(DEFAULT_SETTINGS)),
-    device: DEFAULT_DEVICE
+    device: null
   },
   getters: {
     settings(state) {
@@ -33,9 +33,6 @@ export default new Vuex.Store({
       return state.settings;
     },
     device(state) {
-      if (!state.device) {
-        return DEFAULT_DEVICE;
-      }
       return state.device;
     }
   },
@@ -66,6 +63,9 @@ export default new Vuex.Store({
       uploadDelay = Math.max(uploadDelay, 1);
       const settings = { ...state.settings, uploadDelay: uploadDelay }
       commit('updateSettings', settings);
+    },
+    clearDevice({ commit, state }) {
+      commit('updateDevice', null);
     },
     setDeviceBootloaderVersion({ commit, state }, version) {
       const device = { ...state.device, bootloaderVersion: version }
