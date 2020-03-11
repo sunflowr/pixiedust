@@ -76,7 +76,6 @@ export default {
     drawer: null
   }),
   created() {
-    this.$vuetify.theme.dark = true;
   },
   mounted() {
     if (this.isElectronApp()) {

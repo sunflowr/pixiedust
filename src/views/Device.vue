@@ -13,7 +13,7 @@
         <v-divider></v-divider>
         <v-list-item>
           <v-list-item-icon>
-            <v-icon>mdi-cog-outline</v-icon>
+            <v-icon>mdi-cogs</v-icon>
           </v-list-item-icon>
           <v-list-item-content>
             <v-list-item-title>Settings</v-list-item-title>
@@ -35,16 +35,7 @@
           </v-btn>
         </v-card-title>
       </v-card>
-      <v-list tile dense max-height="30">
-        <v-list-item v-for="(item, i) in items" :key="i">
-          <v-list-item-icon>
-            <v-icon v-text="item.icon"></v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title v-text="item.text"></v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-      </v-list>
+      <FileList />
     </v-navigation-drawer>
 
     <v-container fluid>
@@ -83,6 +74,7 @@
 <script>
 import DeviceInfo from "@/components/DeviceInfo.vue";
 import DeviceSettings from "@/components/DeviceSettings.vue";
+import FileList from "@/components/FileList.vue";
 import { mapGetters } from "vuex";
 import { sysExMessageDescs } from "@/SysExMessages";
 import { Version } from "@/version";
@@ -92,22 +84,14 @@ export default {
   name: "Device",
   components: {
     DeviceInfo,
-    DeviceSettings
+    DeviceSettings,
+    FileList
   },
   data() {
     return {
       syncRequest: null,
       receiveStatus: "",
-      memoryDump: null,
-      items: [
-        { text: "My Files", icon: "mdi-folder" },
-        { text: "Shared with me", icon: "mdi-account-multiple" },
-        { text: "Starred", icon: "mdi-star" },
-        { text: "Recent", icon: "mdi-history" },
-        { text: "Offline", icon: "mdi-check-circle" },
-        { text: "Uploads", icon: "mdi-upload" },
-        { text: "Backups", icon: "mdi-cloud-upload" }
-      ]
+      memoryDump: null
     };
   },
   computed: {
