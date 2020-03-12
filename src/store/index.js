@@ -23,7 +23,19 @@ const DEFAULT_SETTINGS = {
 export default new Vuex.Store({
   state: {
     settings: JSON.parse(window.localStorage.getItem(STORAGE_KEY) || JSON.stringify(DEFAULT_SETTINGS)),
-    device: null
+    device: null,
+    backupFiles: [
+      { name: "File0" },
+      { name: "File1" },
+      { name: "File2" },
+      { name: "File3" },
+      { name: "File4" },
+      { name: "File5" },
+      { name: "File6" },
+      { name: "File7" },
+      { name: "File8" },
+      { name: "File9" }
+    ]
   },
   getters: {
     settings(state) {
@@ -34,6 +46,9 @@ export default new Vuex.Store({
     },
     device(state) {
       return state.device;
+    },
+    backupFiles(state) {
+      return state.backupFiles;
     }
   },
   mutations: {
@@ -42,6 +57,9 @@ export default new Vuex.Store({
     },
     updateDevice: (state, device) => {
       state.device = device;
+    },
+    updateBackupFiles: (state, backupFiles) => {
+      state.backupFiles = backupFiles;
     }
   },
   /* eslint-disable no-unused-vars */
@@ -78,6 +96,10 @@ export default new Vuex.Store({
     setDeviceSettings({ commit, state }, settings) {
       const device = { ...state.device, settings: settings }
       commit('updateDevice', device);
+    },
+    renameBackupFile({ commit, state }, backupFiles) {
+      //const backupFiles = { ...state.backupFiles, backupFiles: backupFiles }
+      //commit('updateBackupFiles', backupFiles);
     }
   },
   /* eslint-enable no-unused-vars */

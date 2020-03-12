@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <v-app-bar app dark flat clipped-left elevation="2">
+    <v-app-bar app flat clipped-left elevation="2">
       <v-tabs icons-and-text show-arrows>
         <v-tab
           v-for="route in $router.options.routes"
@@ -59,7 +59,19 @@
     </v-app-bar>-->
 
     <v-content>
-      <router-view />
+      <v-container fluid>
+        <router-view />
+      </v-container>
+      <v-dialog v-model="dialog" persistent max-width="500">
+        <v-card>
+          <v-card-title class="headline">dialog.title</v-card-title>
+          <v-card-text>dialog.text</v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn color="primary" text @click="dialog = null">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </v-content>
   </v-app>
 </template>
@@ -73,10 +85,10 @@ export default {
   name: "App",
   data: () => ({
     expandedMenu: false,
-    drawer: null
+    drawer: null,
+    dialog: null
   }),
-  created() {
-  },
+  created() {},
   mounted() {
     if (this.isElectronApp()) {
       const { ipcRenderer } = require("electron");

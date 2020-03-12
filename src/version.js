@@ -11,7 +11,7 @@ export class Version {
                     throw new Error("Unrecognized device version, this is not a RE-CPU your talking to.");
                 }
                 this.hardwareId = deserializer.deserialize(DataTypes.uint32);
-                this.name = deserializer.deserialize(DataTypes.string24);
+                this.name = deserializer.deserialize(DataTypes.string24).trim();
                 this.major = deserializer.deserialize(DataTypes.uint8);
                 this.minor = deserializer.deserialize(DataTypes.uint8);
                 this.patch = deserializer.deserialize(DataTypes.uint8);
@@ -19,7 +19,7 @@ export class Version {
             } else {
                 this.magic = version.magic || 0xac1dca78;
                 this.hardwareId = version.hardwareId || 0xac1d0100;
-                this.name = version.name || "<noname>";
+                this.name = version.name.trim() || "<noname>";
                 this.major = version.major || 0;
                 this.minor = version.minor || 0;
                 this.patch = version.patch || 0;

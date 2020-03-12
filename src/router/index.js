@@ -11,8 +11,7 @@ const routes = [
         meta: {
             index: 0,
             icon: 'mdi-home',
-            title: 'Home',
-            accelerator: "CmdOrCtrl+I"
+            title: 'Home'
         },
         component: Home
     },
@@ -22,13 +21,23 @@ const routes = [
         meta: {
             index: 1,
             icon: 'mdi-alien',
-            title: 'Device',
-            accelerator: "CmdOrCtrl+R"
+            title: 'Device'
         },
         // route level code-splitting
         // this generates a separate chunk (about.[hash].js) for this route
         // which is lazy-loaded when the route is visited.
-        component: () => import(/* webpackChunkName: "about" */ '../views/Device.vue')
+        component: () => import(/* webpackChunkName: "about" */ '../views/Device.vue'),
+        children: [
+            {
+                path: 'settings',
+                component: () => import(/* webpackChunkName: "about" */ '../views/DeviceSettings.vue'),
+            },
+            {
+                path: 'backup/:id',
+                component: () => import(/* webpackChunkName: "about" */ '../views/DeviceBackup.vue'),
+            }
+
+        ]
     },
     {
         path: '/midiupload',
@@ -36,8 +45,7 @@ const routes = [
         meta: {
             index: 2,
             icon: 'mdi-download',
-            title: 'Send to device',
-            accelerator: "CmdOrCtrl+U"
+            title: 'Send to device'
         },
         // route level code-splitting
         // this generates a separate chunk (about.[hash].js) for this route
@@ -50,8 +58,7 @@ const routes = [
         meta: {
             index: 3,
             icon: 'mdi-file-export',
-            title: 'SysEx Tool',
-            accelerator: "CmdOrCtrl+S"
+            title: 'SysEx Tool'
         },
         // route level code-splitting
         // this generates a separate chunk (about.[hash].js) for this route
@@ -64,8 +71,7 @@ const routes = [
         meta: {
             index: 4,
             icon: 'mdi-settings',
-            title: 'Settings',
-            accelerator: 'Cmd+,'
+            title: 'Settings'
         },
         // route level code-splitting
         // this generates a separate chunk (about.[hash].js) for this route
