@@ -33,6 +33,10 @@ const routes = [
                 component: () => import(/* webpackChunkName: "about" */ '../views/DeviceSettings.vue'),
             },
             {
+                path: 'backup',
+                component: () => import(/* webpackChunkName: "about" */ '../views/DeviceBackup.vue'),
+            },
+            {
                 path: 'backup/:id',
                 component: () => import(/* webpackChunkName: "about" */ '../views/DeviceBackup.vue'),
             }

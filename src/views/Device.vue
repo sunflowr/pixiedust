@@ -6,7 +6,6 @@
       :syncRequest="syncRequest"
       :backupFiles="backupFiles"
       @device:sync="syncDeviceInfo"
-      @device:request-backup="requestDeviceBackup"
     />
 
     <v-container fluid>
@@ -30,8 +29,7 @@ export default {
   data() {
     return {
       syncRequest: null,
-      receiveStatus: "",
-      memoryDump: null
+      receiveStatus: ""
     };
   },
   computed: {
@@ -100,11 +98,14 @@ export default {
       }
     },
     onMemoryDump(message) {
-      this.memoryDump = message.data;
       /* eslint-disable no-console */
       console.log("memory dump:");
-      console.log(this.memoryDump);
+      console.log(message.data);
       /* eslint-enable no-console */
+      this.$store.dispatch("addBackupFile", {
+        name: `Backup ${this.backupFiles.length}`,
+        data: message.data
+      });
     },
     makeSyncRequest(sysExTracks, timeoutMS) {
       if (this.syncRequest) {
@@ -166,22 +167,6 @@ export default {
       this.makeSyncRequest(
         [
           new Uint8Array([0x03, 0x03, 0x7d, 0x02]) // Settings.
-        ],
-        2000
-      );
-    },
-    /* eslint-disable no-console */
-    openBackupFile(file) {
-      console.log(`selectFile(${file.name})`);
-    },
-    /* eslint-enable no-console */
-    requestDeviceBackup() {
-      if (!this.device) {
-        return;
-      }
-      this.makeSyncRequest(
-        [
-          new Uint8Array([0x03, 0x03, 0x7d, 0x03]) // MemoryDump.
         ],
         2000
       );

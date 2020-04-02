@@ -94,13 +94,7 @@ export default {
     syncing: Boolean
   },
   methods: {
-    test() {
-      alert("poo");
-    },
     /* eslint-disable no-console */
-    syncFromDevice() {
-      console.log(`syncFromDevice()`);
-    },
     importFile() {
       console.log(`importFile()`);
     },
@@ -112,6 +106,7 @@ export default {
     },
     deleteFile(file) {
       console.log(`deleteFile(${file.name})`);
+      this.$store.dispatch("removeBackupFile", file);
     }
     /* eslint-enable no-console */
   }

@@ -26,7 +26,7 @@
           </template>
           <v-card>
             <v-list>
-              <v-list-item>poo</v-list-item>
+              <v-list-item>todo</v-list-item>
             </v-list>
           </v-card>
         </v-menu>

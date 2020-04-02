@@ -13,6 +13,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Made Home screen less cluttered by making release info hidden by default.
 - Added a binary deserializer for easier parsing of SysEx.
 - Started on data schemas to allow for easier extending and supporting of data versioning (hopefully this is a good idea).
+- Started on a standard way of presenting errors to the user.
+- Initial implementation of backup manager.
+- Fixes to sysex multi-package uploading, now the timing is more correctly calculated.
 
 ## 0.1.0
 

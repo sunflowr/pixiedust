@@ -24,18 +24,7 @@ export default new Vuex.Store({
   state: {
     settings: JSON.parse(window.localStorage.getItem(STORAGE_KEY) || JSON.stringify(DEFAULT_SETTINGS)),
     device: null,
-    backupFiles: [
-      { name: "File0" },
-      { name: "File1" },
-      { name: "File2" },
-      { name: "File3" },
-      { name: "File4" },
-      { name: "File5" },
-      { name: "File6" },
-      { name: "File7" },
-      { name: "File8" },
-      { name: "File9" }
-    ]
+    backupFiles: []
   },
   getters: {
     settings(state) {
@@ -60,44 +49,64 @@ export default new Vuex.Store({
     },
     updateBackupFiles: (state, backupFiles) => {
       state.backupFiles = backupFiles;
+    },
+    removeBackupFile: (state, backupFile) => {
+      const index = state.backupFiles.indexOf(backupFile);
+      if(index >= 0){
+        state.backupFiles.splice(index, 1);
+      }
+    },
+    renameBackupFile: (state, payload) => {
+      const index = state.backupFiles.indexOf(payload.file);
+      if(index >= 0){
+        state.backupFiles[index].name = payload.name;
+      }
     }
   },
   /* eslint-disable no-unused-vars */
   actions: {
     setMidiInputDevice({ commit, state }, deviceId) {
-      const settings = { ...state.settings, midiInputDevice: deviceId }
+      const settings = { ...state.settings, midiInputDevice: deviceId };
       commit('updateSettings', settings);
     },
     setMidiOutputDevice({ commit, state }, deviceId) {
-      const settings = { ...state.settings, midiOutputDevice: deviceId }
+      const settings = { ...state.settings, midiOutputDevice: deviceId };
       commit('updateSettings', settings);
     },
     setMidiPort({ commit, state }, port) {
       port = Math.min(Math.max(port, 1), 16);
-      const settings = { ...state.settings, midiPort: port }
+      const settings = { ...state.settings, midiPort: port };
       commit('updateSettings', settings);
     },
     setMidiUploadDelay({ commit, state }, uploadDelay) {
       uploadDelay = Math.max(uploadDelay, 1);
-      const settings = { ...state.settings, uploadDelay: uploadDelay }
+      const settings = { ...state.settings, uploadDelay: uploadDelay };
       commit('updateSettings', settings);
     },
     clearDevice({ commit, state }) {
       commit('updateDevice', null);
     },
     setDeviceBootloaderVersion({ commit, state }, version) {
-      const device = { ...state.device, bootloaderVersion: version }
+      const device = { ...state.device, bootloaderVersion: version };
       commit('updateDevice', device);
     },
     setDeviceAppVersion({ commit, state }, version) {
-      const device = { ...state.device, appVersion: version }
+      const device = { ...state.device, appVersion: version };
       commit('updateDevice', device);
     },
     setDeviceSettings({ commit, state }, settings) {
-      const device = { ...state.device, settings: settings }
+      const device = { ...state.device, settings: settings };
       commit('updateDevice', device);
     },
-    renameBackupFile({ commit, state }, backupFiles) {
+    addBackupFile({ commit, state }, backupFile) {
+      const backupFiles = [...state.backupFiles, backupFile];
+      commit('updateBackupFiles', backupFiles);
+    },
+    removeBackupFile({ commit, state }, backupFile) {
+      commit('removeBackupFile', backupFile);
+    },
+    renameBackupFile({ commit, state }, payload) {
+      commit('renameBackupFile', payload);
       //const backupFiles = { ...state.backupFiles, backupFiles: backupFiles }
       //commit('updateBackupFiles', backupFiles);
     }

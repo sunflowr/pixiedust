@@ -77,8 +77,7 @@ class SysExUtil {
         }
 
         // Package id.
-        if(packageId !== undefined)
-        {
+        if (packageId !== undefined) {
             header.push(packageId & 0xff);
         }
 
@@ -165,6 +164,18 @@ class SysExUtil {
         }
 
         return tracks;
+    }
+
+    /**
+     * Verifies that data contains a SysEx message.
+     * @param {Uint8Array} data 
+     */
+    isSysEx(data) {
+        // Verify that this file contains sysex data.
+        if (!data || data[0] !== 0xf0 || data[data.length - 1] !== 0xf7) {
+            return false;
+        }
+        return true;
     }
 }
 

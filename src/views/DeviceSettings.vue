@@ -232,22 +232,6 @@ export default {
         ],
         2000
       );
-    },
-    /* eslint-disable no-console */
-    openBackupFile(file) {
-      console.log(`selectFile(${file.name})`);
-    },
-    /* eslint-enable no-console */
-    requestDeviceBackup() {
-      if (!this.device) {
-        return;
-      }
-      this.makeSyncRequest(
-        [
-          new Uint8Array([0x03, 0x03, 0x7d, 0x03]) // MemoryDump.
-        ],
-        2000
-      );
     }
   }
 };

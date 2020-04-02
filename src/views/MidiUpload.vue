@@ -40,6 +40,7 @@
 
 <script>
 import { mapGetters } from "vuex";
+import { sysExUtil } from "@/plugins/sysexutil";
 
 export default {
   name: "MidiUpload",
@@ -89,13 +90,14 @@ export default {
         const fileData = new Uint8Array(fileReader.result);
 
         // Verify that this file contains sysex data.
-        if (fileData[0] !== 0xf0 || fileData[fileData.length - 1] !== 0xf7) {
+        if (!sysExUtil.isSysEx(fileData)) {
           that.uploadStatus = "Not a SysEx file, aborting!";
           that.uploadProgressData = 100;
           that.inputFile = null;
           return;
         }
 
+        // Split file in to multiple SysEx message tracks.
         let sysExDataTracks = [];
         let sysExStart = 0;
         let sysExEnd = 0;
@@ -110,48 +112,33 @@ export default {
         }
 
         // Upload SysEx.
-        for (let i = 0; i < sysExDataTracks.length; ++i) {
-          const uploadDelay = "+" + (i * that.settings.uploadDelay).toString();
-          /* eslint-disable no-console */
-          console.log(uploadDelay);
-          /* eslint-enable no-console */
-          that.uploadProgressData = Math.trunc(
-            (100 * (i + 1)) / sysExDataTracks.length
+        if (that.$MIDI && that.$MIDI.webMidi) {
+          that.$MIDI.sendSysEx(
+            that.midiOutDevice,
+            sysExDataTracks,
+            that.settings.uploadDelay,
+            progress => {
+              // Progress.
+              that.uploadProgressData = progress * 100;
+            },
+            () => {
+              // Resolve.
+              that.uploadStatus = "Done uploading";
+              that.inputFile = null;
+              that.uploadProgress = 100;
+            },
+            error => {
+              // Reject.
+              that.uploadStatus = error;
+              that.inputFile = null;
+              that.uploadProgress = 100;
+            }
           );
-          that.midiOutDevice.sendSysex(0x7d, Array.from(sysExDataTracks[i]), {
-            time: uploadDelay
-          });
-        }
-
-        if (!that.midiOutDevice) {
-          that.uploadStatus = "No active midi output device, aborting!";
         } else {
-          that.uploadStatus = "Done uploading";
+          that.uploadStatus = "No active midi!";
         }
-        that.inputFile = null;
-        that.uploadProgress = 100;
-        //that.delayUploadSysEx(that.settings.uploadDelay, sysExDataTracks, 0);
       };
       fileReader.readAsArrayBuffer(file);
-    },
-    delayUploadSysEx(delayMs, tracks, currentTrack) {
-      if (this.midiOutDevice && currentTrack < tracks.length) {
-        this.uploadProgressData = Math.trunc(
-          (100 * (currentTrack + 1)) / tracks.length
-        );
-        this.midiOutDevice.sendSysex(0x7d, Array.from(tracks[currentTrack]));
-        setTimeout(() => {
-          this.delayUploadSysEx(delayMs, tracks, currentTrack + 1);
-        }, delayMs);
-      } else {
-        if (!this.midiOutDevice) {
-          this.uploadStatus = "No active midi output device, aborting!";
-        } else {
-          this.uploadStatus = "Done uploading";
-        }
-        this.inputFile = null;
-        this.uploadProgress = 1000;
-      }
     }
   }
 };

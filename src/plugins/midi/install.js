@@ -89,12 +89,14 @@ export function install(Vue) {
                 that.uploadProgressData = Math.trunc((currentTrack + 1)) / tracks.length;
 
                 if (midiOutDevice && currentTrack < tracks.length) {
+                    // Calculate expected upload time for track.
+                    const trackTimeMS = ((tracks[currentTrack].length / (31250 / 8)) * 1000) + 10;
+                    const extraTrackDelayMS = 10;
                     midiOutDevice.sendSysex(0x7d, Array.from(tracks[currentTrack]));
                     setTimeout(() => {
                         onProgress(currentTrack / tracks.length);
-                        (31268 / 8)
                         that.delaySendSysEx(midiOutDevice, delayMs, tracks, currentTrack + 1, onProgress, onResolve, onReject);
-                    }, delayMs);
+                    }, trackTimeMS + extraTrackDelayMS + delayMs);
                 } else {
                     that.uploading = false;
                     if (!midiOutDevice) {

@@ -62,10 +62,10 @@
       <v-container fluid>
         <router-view />
       </v-container>
-      <v-dialog v-model="dialog" persistent max-width="500">
+      <v-dialog v-if="!!dialog" v-model="dialog" persistent max-width="500">
         <v-card>
-          <v-card-title class="headline">dialog.title</v-card-title>
-          <v-card-text>dialog.text</v-card-text>
+          <v-card-title class="headline">{{ dialog.title }}</v-card-title>
+          <v-card-text>{{ dialog.text }}</v-card-text>
           <v-card-actions>
             <v-spacer />
             <v-btn color="primary" text @click="dialog = null">Close</v-btn>
@@ -90,6 +90,7 @@ export default {
   }),
   created() {},
   mounted() {
+    this.$router.onError(this.showError);
     if (this.isElectronApp()) {
       const { ipcRenderer } = require("electron");
       if (ipcRenderer) {
@@ -208,6 +209,9 @@ export default {
       sysExHandler.onSysEx(ev.data, sysExMessageDescs);
     },
     /* eslint-enable no-unused-vars */
+    showError(error) {
+      this.dialog = { title: "Error", text: error.message };
+    },
     isElectronApp() {
       // Renderer process
       if (

@@ -20,7 +20,7 @@
       label="Backups"
       :syncing="!!syncRequest"
       :files="backupFiles"
-      @sync-memory="$emit('device:request-backup')"
+      @sync-memory="requestDeviceBackup"
       @select-file="openBackupFile"
       class="pa-0 transparent"
     ></FileList>
@@ -43,6 +43,12 @@ export default {
     FileList
   },
   methods: {
+    requestDeviceBackup() {
+      const routePath = "/device/backup";
+      if (this.$route.path !== routePath) {
+        this.$router.push(routePath);
+      }
+    },
     /* eslint-disable no-unused-vars */
     openBackupFile(index, file) {
       const routePath = "/device/backup/" + index;
