@@ -73,8 +73,15 @@
           1,
           16
         ]
+      },
+      "isMidiOmniMode": {
+        "name": "Omni mode",
+        "desc": "Receive MIDI notes on all channels",
+        "type": "bool",
+        "default": false,
+        "view": "checkbox"
       }
-    }
+   }
   },
   "latest": "1.1.1"
 }
