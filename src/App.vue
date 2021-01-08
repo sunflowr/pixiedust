@@ -58,7 +58,7 @@
       <v-toolbar-title>{{ currentRouteName }}</v-toolbar-title>
     </v-app-bar>-->
 
-    <v-content>
+    <v-main>
       <v-container fluid>
         <router-view />
       </v-container>
@@ -72,7 +72,7 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
-    </v-content>
+    </v-main>
   </v-app>
 </template>
 

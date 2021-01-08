@@ -18,6 +18,7 @@
         "default": 0
       },
       "isSyncMaster": {
+        "group": "midi",
         "name": "Device is master",
         "desc": "Device sends or listen to start/stop and clock messages",
         "type": "bool",
@@ -25,6 +26,7 @@
         "view": "checkbox"
       },
       "remoteMode": {
+        "group": "midi",
         "name": "Remote mode",
         "desc": "Use device as a MIDI sound source",
         "type": "bool",
@@ -32,6 +34,7 @@
         "view": "checkbox"
       },
       "sendNotes": {
+        "group": "midi",
         "name": "Send notes",
         "desc": "Send notes from sequencer while playing",
         "type": "bool",
@@ -39,6 +42,7 @@
         "view": "checkbox"
       },
       "transposeOnNoteIn": {
+        "group": "midi",
         "name": "Transpose on note",
         "desc": "Transpose pattern when a MIDI note is played",
         "type": "bool",
@@ -46,6 +50,7 @@
         "view": "checkbox"
       },
       "patternChangeOnNoteIn": {
+        "group": "midi",
         "name": "Change pattern on note",
         "desc": "Change pattern when a MIDI note is played",
         "type": "bool",
@@ -53,6 +58,7 @@
         "view": "checkbox"
       },
       "midiChannelIn": {
+        "group": "midi",
         "name": "MIDI channel in",
         "desc": "MIDI channel in",
         "type": "uint8",
@@ -64,6 +70,7 @@
         ]
       },
       "midiChannelOut": {
+        "group": "midi",
         "name": "MIDI channel out",
         "desc": "MIDI channel out",
         "type": "uint8",
@@ -75,6 +82,7 @@
         ]
       },
       "isMidiOmniMode": {
+        "group": "midi",
         "name": "Omni mode",
         "desc": "Receive MIDI notes on all channels",
         "type": "bool",

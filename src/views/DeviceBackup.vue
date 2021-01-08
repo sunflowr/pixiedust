@@ -3,9 +3,13 @@
     <v-btn @click="requestDeviceBackup">Backup</v-btn>
     <v-card v-if="!!currentBackup">
       <v-card-title>
-        <v-text-field v-model="currentBackupName" label="Name" solo-inverted></v-text-field>
+        <v-text-field
+          v-model="currentBackupName"
+          label="Name"
+          solo-inverted
+        ></v-text-field>
       </v-card-title>
-      <v-card-text style="font-family:monospace;">
+      <v-card-text style="font-family: monospace">
         <div>Data:</div>
         <div v-for="(line, i) in hexView" :key="i">
           <span>{{ line }}</span>
@@ -24,7 +28,7 @@ export default {
   data() {
     return {
       currentBackup: null,
-      hexView: null
+      hexView: null,
     };
   },
   /* eslint-disable no-unused-vars */
@@ -44,9 +48,18 @@ export default {
       next();
     }
   },
+  watch: {
+    backupFiles() {
+      if (
+        (!this.currentBackup || this.currentBackup.data.length == 0) &&
+        this.backupFiles.length > 0
+      ) {
+        this.openBackupFile(0);
+      }
+    },
+  },
   /* eslint-enable no-console */
   /* eslint-enable no-unused-vars */
-  watch: {},
   computed: {
     ...mapGetters(["settings"]),
     ...mapGetters(["device"]),
@@ -69,10 +82,13 @@ export default {
       },
       /* eslint-disable no-unused-vars */
       set(value) {
-        this.$store.dispatch("renameBackupFile", { file: this.currentBackup, name: value });
-      }
+        this.$store.dispatch("renameBackupFile", {
+          file: this.currentBackup,
+          name: value,
+        });
+      },
       /* eslint-enable no-unused-vars */
-    }
+    },
   },
   methods: {
     openBackupFile(id) {
@@ -103,7 +119,7 @@ export default {
         this.syncRequest = {
           tracks: sysExTracks,
           timeout: setTimeout(this.onSyncTimedOut, timeoutMS),
-          receive: 0
+          receive: 0,
         };
         this.$MIDI.sendSysEx(
           this.midiOutDevice,
@@ -115,7 +131,7 @@ export default {
           () => {
             // Resolve.
           },
-          error => {
+          (error) => {
             // Reject.
             that.receiveStatus = error;
             that.clearSyncRequest();
@@ -142,11 +158,11 @@ export default {
       }
       this.makeSyncRequest(
         [
-          new Uint8Array([0x03, 0x03, 0x7d, 0x03]) // MemoryDump.
+          new Uint8Array([0x03, 0x03, 0x7d, 0x03]), // MemoryDump.
         ],
         2000
       );
-    }
-  }
+    },
+  },
 };
 </script>

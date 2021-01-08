@@ -34,6 +34,8 @@
     "@mdi/js": "^5.8.55",
     "@vue/cli-plugin-babel": "^4.5.10",
     "@vue/cli-plugin-eslint": "^4.5.10",
+    "@vue/cli-plugin-router": "~4.5.0",
+    "@vue/cli-plugin-vuex": "~4.5.0",
     "@vue/cli-service": "^4.5.10",
     "babel-eslint": "^10.1.0",
     "electron": "^11.1.1",

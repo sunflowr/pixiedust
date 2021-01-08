@@ -74,7 +74,7 @@ const routes = [
         name: 'settings',
         meta: {
             index: 4,
-            icon: 'mdi-settings',
+            icon: 'mdi-cog',
             title: 'Settings'
         },
         // route level code-splitting

@@ -24,12 +24,13 @@ import { Settings } from "@/settings";
 export default {
   name: "Device",
   components: {
-    DeviceNav
+    DeviceNav,
   },
   data() {
     return {
       syncRequest: null,
-      receiveStatus: ""
+      receiveStatus: "",
+      pinger: null,
     };
   },
   computed: {
@@ -47,7 +48,7 @@ export default {
         return this.$MIDI.webMidi.getOutputById(this.settings.midiOutputDevice);
       }
       return null;
-    }
+    },
   },
   mounted() {
     sysExMessageDescs.DataResponse_Version.addListener(this.onVersion);
@@ -104,7 +105,7 @@ export default {
       /* eslint-enable no-console */
       this.$store.dispatch("addBackupFile", {
         name: `Backup ${this.backupFiles.length}`,
-        data: message.data
+        data: message.data,
       });
     },
     makeSyncRequest(sysExTracks, timeoutMS) {
@@ -116,7 +117,7 @@ export default {
         this.syncRequest = {
           tracks: sysExTracks,
           timeout: setTimeout(this.onSyncTimedOut, timeoutMS),
-          receive: 0
+          receive: 0,
         };
         this.$MIDI.sendSysEx(
           this.midiOutDevice,
@@ -128,7 +129,7 @@ export default {
           () => {
             // Resolve.
           },
-          error => {
+          (error) => {
             // Reject.
             that.receiveStatus = error;
             that.clearSyncRequest();
@@ -155,7 +156,7 @@ export default {
         [
           new Uint8Array([0x03, 0x03, 0x7c, 0x00]), // Bootloader version.
           new Uint8Array([0x03, 0x03, 0x7c, 0x01]), // Application version.
-          new Uint8Array([0x03, 0x03, 0x7d, 0x02]) // Settings.
+          new Uint8Array([0x03, 0x03, 0x7d, 0x02]), // Settings.
         ],
         2000
       );
@@ -166,11 +167,40 @@ export default {
       }
       this.makeSyncRequest(
         [
-          new Uint8Array([0x03, 0x03, 0x7d, 0x02]) // Settings.
+          new Uint8Array([0x03, 0x03, 0x7d, 0x02]), // Settings.
         ],
         2000
       );
-    }
-  }
+    },
+    startPing() {
+      if (!this.pinger) {
+        const that = this;
+
+        this.pinger = setInterval(() => {
+          // Ping.
+          this.$MIDI.sendSysEx(
+            this.midiOutDevice,
+            [new Uint8Array([0x03, 0x03, 0x7a])],
+            2000,
+            () => {
+              // Progress.
+            },
+            () => {
+              // Resolve.
+            },
+            (error) => {
+              // Reject.
+              that.receiveStatus = error;
+              that.clearSyncRequest();
+            }
+          );
+        }, 10000);
+      }
+    },
+    stopPing() {
+      clearInterval(this.pinger);
+      this.pinger = null;
+    },
+  },
 };
 </script>
