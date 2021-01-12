@@ -109,6 +109,15 @@ export default {
     this.$MIDI.$on("midi:disconnected", this.midiDisconnected);
     //this.midiInitialized();
 
+    // Add sysex listener if configured.
+    if (this.midiInDevice) {
+      this.midiInDevice.addListener(
+        "sysex",
+        undefined,
+        this.onMidiSysExReceive
+      );
+    }
+
     /* eslint-disable no-unused-vars */
     this.$store.subscribeAction({
       before: (action, state) => {
