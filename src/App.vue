@@ -86,7 +86,7 @@ export default {
   data: () => ({
     expandedMenu: false,
     drawer: null,
-    dialog: null
+    dialog: null,
   }),
   created() {},
   mounted() {
@@ -128,7 +128,7 @@ export default {
             this.onMidiSysExReceive
           );
         }
-      }
+      },
     });
     /* eslint-enable no-unused-vars */
   },
@@ -155,7 +155,7 @@ export default {
         return this.$MIDI.webMidi.getInputById(this.settings.midiInputDevice);
       }
       return null;
-    }
+    },
   },
   methods: {
     /* eslint-disable no-unused-vars */
@@ -166,7 +166,7 @@ export default {
     midiFailed(msg) {
       this.errorMessage = {
         title: "Failed to initialize MIDI",
-        text: msg
+        text: msg,
       };
     },
     midiSetInputDevice(deviceId) {
@@ -241,7 +241,7 @@ export default {
       }
 
       return false;
-    }
-  }
+    },
+  },
 };
 </script>

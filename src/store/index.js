@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
+import createPersistedState from "vuex-persistedstate"
 //import { Version } from "@/version";
 //import { Settings } from "@/settings";
 
@@ -22,7 +23,7 @@ const DEFAULT_SETTINGS = {
 
 export default new Vuex.Store({
   state: {
-    settings: JSON.parse(window.localStorage.getItem(STORAGE_KEY) || JSON.stringify(DEFAULT_SETTINGS)),
+    settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
     device: null,
     backupFiles: []
   },
@@ -52,13 +53,13 @@ export default new Vuex.Store({
     },
     removeBackupFile: (state, backupFile) => {
       const index = state.backupFiles.indexOf(backupFile);
-      if(index >= 0){
+      if (index >= 0) {
         state.backupFiles.splice(index, 1);
       }
     },
     renameBackupFile: (state, payload) => {
       const index = state.backupFiles.indexOf(payload.file);
-      if(index >= 0){
+      if (index >= 0) {
         state.backupFiles[index].name = payload.name;
       }
     }
@@ -113,5 +114,8 @@ export default new Vuex.Store({
   },
   /* eslint-enable no-unused-vars */
   modules: {
-  }
+  },
+  plugins: [createPersistedState({
+    key: STORAGE_KEY
+  })]
 });
