@@ -8,8 +8,8 @@ Vue.use(Vuex)
 
 const STORAGE_KEY = 'pixiedust';
 const DEFAULT_SETTINGS = {
-  midiInputDevice: null,
-  midiOutputDevice: null,
+  midiInputDevice: 0,
+  midiOutputDevice: 0,
   midiPort: 1,
   uploadDelay: 250
 };
@@ -116,6 +116,7 @@ export default new Vuex.Store({
   modules: {
   },
   plugins: [createPersistedState({
-    key: STORAGE_KEY
+    key: STORAGE_KEY,
+    paths: ['settings', 'backupFiles'],
   })]
 });

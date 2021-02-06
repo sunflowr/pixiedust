@@ -105,7 +105,7 @@ export default {
       /* eslint-enable no-console */
       this.$store.dispatch("addBackupFile", {
         name: `Backup ${this.backupFiles.length}`,
-        data: message.data,
+        data: Array.from(message.data), // Need to be vanilla array due to localstorage.
       });
     },
     makeSyncRequest(sysExTracks, timeoutMS) {

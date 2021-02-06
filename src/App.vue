@@ -109,15 +109,6 @@ export default {
     this.$MIDI.$on("midi:disconnected", this.midiDisconnected);
     //this.midiInitialized();
 
-    // Add sysex listener if configured.
-    if (this.midiInDevice) {
-      this.midiInDevice.addListener(
-        "sysex",
-        undefined,
-        this.onMidiSysExReceive
-      );
-    }
-
     /* eslint-disable no-unused-vars */
     this.$store.subscribeAction({
       before: (action, state) => {
@@ -195,6 +186,19 @@ export default {
     /* eslint-disable no-unused-vars */
     midiConnected(ev) {
       this.midiSetDefaultDeviceIfEmpty();
+      // Add sysex listener if configured.
+      if (this.midiInDevice) {
+        this.midiInDevice.removeListener(
+          "sysex",
+          undefined,
+          this.onMidiSysExReceive
+        );
+        this.midiInDevice.addListener(
+          "sysex",
+          undefined,
+          this.onMidiSysExReceive
+        );
+      }
     },
     /* eslint-enable no-unused-vars */
     midiDisconnected(ev) {

@@ -9,7 +9,8 @@
           solo-inverted
         ></v-text-field>
       </v-card-title>
-      <v-card-text style="font-family: monospace">
+      <v-card-text style="font-family: monospace" v-if="!!hexView">
+        <piano-roll @mouse-move="onMouseMove" @mouse-down="onMouseDown" @mouse-up="onMouseUp" />
         <div>Data:</div>
         <div v-for="(line, i) in hexView" :key="i">
           <span>{{ line }}</span>
@@ -21,10 +22,11 @@
 
 <script>
 import { mapGetters } from "vuex";
+import PianoRoll from "@/components/PianoRoll/PianoRoll.vue";
 
 export default {
   name: "DeviceBackup",
-  components: {},
+  components: { PianoRoll },
   data() {
     return {
       currentBackup: null,
@@ -163,6 +165,17 @@ export default {
         2000
       );
     },
+    /* eslint-disable no-console */
+    onMouseMove(evt) {
+      console.log(evt);
+    },
+    onMouseDown(evt) {
+      console.log(evt);
+    },
+    onMouseUp(evt) {
+      console.log(evt);
+    },
+    /* eslint-enable no-console */
   },
 };
 </script>
