@@ -85,6 +85,10 @@ export default {
           fill: this.$vuetify.theme.currentTheme.noteColor,
           stroke: this.$vuetify.theme.currentTheme.cellSeparator,
         },
+        selectedNote: {
+          fill: this.$vuetify.theme.currentTheme.noteColor,
+          stroke: this.$vuetify.theme.currentTheme.selectedNoteStroke,
+        }
       },
       notes: [
         {
@@ -167,7 +171,26 @@ export default {
       this.render();
     }, 1000);
 
-    /*var canvas = this.$refs["piano-roll-canvas"];
+    /*
+    https://v3.vuejs.org/guide/migration/introduction.html#breaking-changes
+    https://v3.vuejs.org/guide/migration/introduction.html#devtools-extension
+    https://johnpapa.net/vue2-to-vue3/
+    https://eslint.vuejs.org/
+    https://medium.com/@LegendofColt/eslint-for-vue-js-f39194f15beb
+    https://dev.to/reiallenramos/drawing-in-vue-using-mousemove-event-34cg
+    https://stackoverflow.com/questions/13576149/creating-an-html5-piano-roll-editor
+    https://lavrton.com/hit-region-detection-for-html5-canvas-and-how-to-listen-to-click-events-on-canvas-shapes-815034d7e9f8/
+    https://stackoverflow.com/questions/16531327/get-canvas-size-from-its-context
+    https://medium.com/@scottmatthew/using-html-canvas-with-vue-js-493e5ae60887
+    https://www.digitalocean.com/community/tutorials/vuejs-vue-html5-canvas
+    https://github.com/lecion/vue-perfect-scrollbar
+    https://vuejs.org/v2/cookbook/avoiding-memory-leaks.html
+    https://vuetifyjs.com/en/styles/colors/#material-colors
+    https://vuetifyjs.com/en/features/theme/#example
+    https://github.com/lecion/vue-perfect-scrollbar
+    https://binaryify.github.io/vue-custom-scrollbar/en/#why-custom-scrollbar
+    https://stackoverflow.com/questions/36219632/html5-canvas-scrolling-vertically-and-horizontally
+    var canvas = this.$refs["piano-roll-canvas"];
     var scrollbar = {
       left: 0,
       top: 0,
@@ -257,16 +280,21 @@ export default {
       ctx.restore();
 
       // Note test.
+      const selected = false;
       const cw = rowSize.width / 17;
       for (let i = 0; i < this.notes.length; ++i) {
         const note = this.notes[i];
         const row = this.gridPitches.length - 1 - note.note;
         ctx.save();
         ctx.translate(cw + note.pos * cw, row * rowSize.height);
-        this.renderNote(ctx, {
-          width: cw * note.length,
-          height: rowSize.height,
-        });
+        this.renderNote(
+          ctx,
+          {
+            width: cw * note.length,
+            height: rowSize.height,
+          },
+          selected ? this.gridStyles.selectedNote : this.gridStyles.note
+        );
         ctx.restore();
       }
 
@@ -305,9 +333,11 @@ export default {
       ctx.fill();
       ctx.stroke();
     },
-    renderNote(ctx, size) {
-      this.renderCell(ctx, size, this.gridStyles.note);
+    /* eslint-disable no-unused-vars */
+    renderNote(ctx, size, style) {
+      this.renderCell(ctx, size);
     },
+    /* eslint-enable no-unused-vars */
     renderPlayHead(ctx, x, height, style) {
       ctx.beginPath();
       ctx.lineWidth = 2;

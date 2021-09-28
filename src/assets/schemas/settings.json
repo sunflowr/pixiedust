@@ -89,7 +89,7 @@
         "default": false,
         "view": "checkbox"
       }
-   }
+    }
   },
   "latest": "1.1.1"
 }

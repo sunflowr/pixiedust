@@ -16,14 +16,16 @@ export default new Vuetify({
                 columnLight: '#dbdbdb',
                 cellSeparator: '#d0d0d0',
                 octaveSeparator: '#3E3E3E',
-                noteColor: '#19B5E6'
+                noteColor: '#19B5E6',
+                selectedNoteStroke: '#ffffff'
             },
             dark: {
                 columnDark: '#202020',
                 columnLight: '#242424',
                 cellSeparator: '#2F2F2F',
                 octaveSeparator: '#3E3E3E',
-                noteColor: '#E64A19'
+                noteColor: '#E64A19',
+                selectedNoteStroke: '#ffffff'
             }
         }
     },
