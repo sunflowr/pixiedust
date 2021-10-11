@@ -17,7 +17,6 @@ const routes = [
     },
     {
         path: '/device',
-        name: 'device',
         meta: {
             index: 1,
             icon: 'mdi-alien',
@@ -28,6 +27,11 @@ const routes = [
         // which is lazy-loaded when the route is visited.
         component: () => import(/* webpackChunkName: "about" */ '../views/Device.vue'),
         children: [
+            {
+                path: '',
+                name: 'device',
+                component: () => import(/* webpackChunkName: "about" */ '../views/DeviceHome.vue'),
+            },
             {
                 path: 'settings',
                 component: () => import(/* webpackChunkName: "about" */ '../views/DeviceSettings.vue'),
@@ -56,19 +60,20 @@ const routes = [
         // which is lazy-loaded when the route is visited.
         component: () => import(/* webpackChunkName: "about" */ '../views/MidiUpload.vue')
     },
-    {
-        path: '/sysextool',
-        name: 'sysextool',
-        meta: {
-            index: 3,
-            icon: 'mdi-file-export',
-            title: 'SysEx Tool'
-        },
-        // route level code-splitting
-        // this generates a separate chunk (about.[hash].js) for this route
-        // which is lazy-loaded when the route is visited.
-        component: () => import(/* webpackChunkName: "about" */ '../views/SysExTool.vue')
-    },
+    // Disabled: As it's not really needed and cause confusions and questions.
+    //{
+    //    path: '/sysextool',
+    //    name: 'sysextool',
+    //    meta: {
+    //        index: 3,
+    //        icon: 'mdi-file-export',
+    //        title: 'SysEx Tool'
+    //    },
+    //    // route level code-splitting
+    //    // this generates a separate chunk (about.[hash].js) for this route
+    //    // which is lazy-loaded when the route is visited.
+    //    component: () => import(/* webpackChunkName: "about" */ '../views/SysExTool.vue')
+    //},
     {
         path: '/settings',
         name: 'settings',

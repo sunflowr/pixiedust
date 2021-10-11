@@ -3,8 +3,8 @@
     <v-card
       flat
       class="mx-auto pa-0 transparent"
-      :loading="syncing"
-      :disabled="syncing"
+      :loading="loading"
+      :disabled="loading"
     >
       <v-card-title class="pa-0">
         RE-CPU info
@@ -13,7 +13,7 @@
           <v-icon left>mdi-refresh</v-icon>Sync
         </v-btn>
       </v-card-title>
-      <div class="my-2" v-if="!!device && !syncing">
+      <div class="my-2" v-if="!!device && !loading">
         <v-card-subtitle class="pa-0 font-weight-medium">Bootloader</v-card-subtitle>
         <v-menu offset-x>
           <template v-slot:activator="{ on }">
@@ -32,7 +32,7 @@
         </v-menu>
       </div>
 
-      <div class="my-2" v-if="!!device && !syncing">
+      <div class="my-2" v-if="!!device && !loading">
         <v-card-subtitle class="pa-0 font-weight-medium">Application</v-card-subtitle>
         <v-menu offset-x>
           <template v-slot:activator="{ on }">
@@ -59,7 +59,7 @@ export default {
   name: "DeviceInfo",
   props: {
     device: Object,
-    syncing: Boolean
+    loading: Boolean
   }
 };
 </script>

@@ -10,12 +10,83 @@ function compareArrays(a, b) {
     return true;
 }
 
+export class SysExMessageBase {
+    /**
+     * 
+     * @param {Uint8Array} headerPrefix - SysEx message header prefix.
+     * @param {Uint8Array} sysExData - SysEx data for the message to parse.
+     */
+    constructor(headerPrefix, sysExData) {
+        this.parseBase(headerPrefix, sysExData);
+    }
+
+    /**
+     * Parses data. Silly redirection of constructor as there seem to be some issue with extend and base fields.
+     * @param {Uint8Array} headerPrefix - SysEx message header prefix.
+     * @param {Uint8Array} sysExData - SysEx data for the message to parse.
+     */
+    parseBase(headerPrefix, sysExData) {
+        // Assign header and data.
+        this._headerPrefix = headerPrefix;
+        this._sysExData = sysExData;
+        this._header = sysExData.slice(0, this._headerPrefix.length);
+        this._data = sysExData.slice(this._header.length, -1);
+    }
+
+    /** Returns the SysEx header. */
+    get header() { return this._header; }
+    /** Returns the data of the message. */
+    get data() { return this._data; }
+
+    /** Converts a array of two elements in to a uint16 value.
+     * 
+     * @param {Uint8Array} data - Data to convert.
+     * @returns {Number} A uint16 value.
+    */
+    static toUint16(data) { return ((data[0] << 8) | (data[1] << 0)) >>> 0; }
+
+    /** Converts a array of four elements in to a uint32 value.
+     * 
+     * @param {Uint8Array} data - Data to convert.
+     * @returns {Number} A uint32 value.
+    */
+    static toUint32(data) { return ((data[0] << 24) | (data[1] << 16) | (data[2] << 8) | (data[3] << 0)) >>> 0; }
+
+    /** Converts a uint16 value to a uint8 array.
+     * 
+     * @param {Number} uint16value - Value to convert.
+     * @returns {Uint8Array} A uint8 array.
+    */
+    static uint16ToUint8Array(uint16value) {
+        const val = new Uint8Array(2);
+        val[0]= ((uint16value >> 8) & 0xff) >>> 0;
+        val[1]= ((uint16value >> 0) & 0xff) >>> 0;
+        return val;
+    }
+
+    /** Converts a uint32 value to a uint8 array.
+     * 
+     * @param {Number} uint32value - Value to convert.
+     * @returns {Uint8Array} A uint8 array.
+    */
+    static uint32ToUint8Array(uint32value) {
+        const val = new Uint8Array(4);
+        val[0]= ((uint32value >> 24) & 0xff) >>> 0;
+        val[1]= ((uint32value >> 16) & 0xff) >>> 0;
+        val[2]= ((uint32value >> 8) & 0xff) >>> 0;
+        val[3]= ((uint32value >> 0) & 0xff) >>> 0;
+        return val;
+    }
+}
+
 export class SysExMessageDesc {
-    constructor(prefix, size, hasPacketIndex, onData) {
+    constructor(prefix, size, hasPacketIndex, onData, onIsLastMessage, onIsValid) {
         this._messagePrefix = prefix;
         this._messageSize = size;
         this._hasPacketIndex = hasPacketIndex;
         this._onData = onData;
+        this._onIsLastMessage = onIsLastMessage;
+        this._onIsValid = onIsValid;
         this._listeners = [];
     }
 
@@ -29,6 +100,20 @@ export class SysExMessageDesc {
 
     get hasPacketIndex() {
         return this._hasPacketIndex;
+    }
+
+    IsLastMessage(sysExMessage) {
+        if(this._onIsLastMessage) {
+            return this._onIsLastMessage(sysExMessage);
+        }
+        return false;
+    }
+
+    IsValid(sysExMessage) {
+        if(this._onIsValid) {
+            return this._onIsValid(sysExMessage);
+        }
+        return true;
     }
 
     OnData(data) {
@@ -70,6 +155,7 @@ export class SysExMessage {
         const headerSize = (this._desc.messageSize !== 0xff) ? this._desc.messageSize : this._desc.messagePrefix.length;
         this._header = data.slice(0, headerSize);
         this._data = data.slice(headerSize, -1);
+        this._packetIndex = 0;
 
         // Process any extra data in the message header.
         const extraData = Object.entries(this._desc.OnData(this._data));
@@ -79,7 +165,6 @@ export class SysExMessage {
             this[key] = val;
         }
         // Read packet index.
-        this._packetIndex = 0;
         if (this._desc.hasPacketIndex) {
             this._packetIndex = this._data[0];
             this._data = this._data.slice(1);
@@ -101,24 +186,8 @@ export class SysExMessage {
             }
 
             if (checksum !== dataChecksum) {
-                throw new Error("Error when reciving, data is corrupt.");
+                throw new Error("Error when receiving, data is corrupt.");
             }
-        }
-
-        // Is this last message?
-        if (this._desc.messageSize === 0xff) {
-            this._isLastMessage = this._data.length === 0;
-        }
-        else {
-            this._isLastMessage = data.length === this._desc.messageSize;
-            // TODO: Verify this is working as intended.
-            /* eslint-disable no-console */
-            console.log("last message false:");
-            if (this._isLastMessage) {
-                console.log("last message false");
-            }
-            console.log(this._data);
-            /* eslint-enable no-console */
         }
     }
 
@@ -126,12 +195,42 @@ export class SysExMessage {
         return this._desc;
     }
 
+    get header() {
+        return this._header;
+    }
+
     get data() {
         return this._data;
     }
 
+    get packetIndex() {
+        return this._packetIndex;
+    }
+
     get isLastMessage() {
-        return this._isLastMessage;
+        // Is this last message?
+        if(this._desc.IsLastMessage(this)) {
+            return true;
+        }
+        if (this._desc.messageSize === 0xff) {
+            return this._data.length === 0;
+        }
+        // TODO: Verify this is working as intended.
+        /* eslint-disable no-console */
+        console.log("last message false:");
+        /*if (this._isLastMessage) {
+            console.log("last message false");
+        }
+        console.log(this._data);*/
+        /* eslint-enable no-console */
+        return this._data.length === this._desc.messageSize;
+    }
+
+    get isValid() {
+        //if(this._desc.IsValid(this)) {
+        //    return true;
+        //}
+        return true;
     }
 
     appendMessage(message) {
@@ -146,38 +245,100 @@ export class SysExMessage {
         tmp.set(this._data);
         tmp.set(message.data, this._data.length);
         this._data = tmp;
-        this._packetIndex = message._packetIndex;
-        this._isLastMessage = message.isLastMessage;
+        this._packetIndex = message.packetIndex;
     }
 }
 
 class SysExHandler {
-    constructor() {
+    /**
+     * @callback sysExMessageCallback
+     */
+     constructor() {
+        this._listeners = new Array();
     }
 
-    onSysEx(sysExMessage, sysExMessageDescs) {
-        const messageDesc = Object.values(sysExMessageDescs).find(x => compareArrays(x.messagePrefix, sysExMessage.slice(0, x.messagePrefix.length)));
-        if (messageDesc) {
-            const message = new SysExMessage(messageDesc, sysExMessage);
-            if (message._packetIndex > 0) {
-                if (!this._currentMessage) {
-                    throw new Error("SysEx message received in wrong order.")
-                }
-                else if (message.desc !== this._currentMessage.desc) {
-                    throw new Error("Received a new SysEx message while already busy processing another message.")
-                }
-                this._currentMessage.appendMessage(message);
-            } else if (this._currentMessage) {
-                throw new Error("Received a new SysEx message while already busy processing another message.")
-            } else {
-                this._currentMessage = message;
-            }
-            if (this._currentMessage.isLastMessage) {
-                messageDesc.dispatch(this._currentMessage);
-                delete this._currentMessage;
+    /**
+     * Add a sysex message listener.
+     * @param {Uint8Array} sysExHeaderPrefix - SysEx header prefix to listen at.
+     * @param {sysExMessageCallback} listener - Listener to call on message.
+     */
+    addListener(sysExHeaderPrefix, listener) {
+        if (typeof listener !== 'function') {
+            throw new TypeError("The listener must be a function.");
+        }
+        let index =this._listeners.findIndex(x => compareArrays(x.headerPrefix, sysExHeaderPrefix));
+        if(index < 0) {
+            this._listeners.push({
+                headerPrefix: sysExHeaderPrefix,
+                listeners: new Array()
+            });
+            index = this._listeners.length - 1;
+        }
+        this._listeners[index].listeners.push(listener);
+    }
+
+    /**
+     * Removes a listener.
+     * @param {sysExMessageCallback} listener - SysEx message listener to remove.
+     */
+    removeListener(listener) {
+        if (typeof listener !== 'function') {
+            throw new TypeError("The listener must be a function.");
+        }
+        for(const x of this._listeners) {
+            const index = x.listeners.indexOf(listener);
+            if(index >= 0) {
+                x.listeners.splice(index, 1);
             }
         }
     }
+
+    /* eslint-disable no-unused-vars */
+    onSysEx(sysExMessage, sysExMessageDescs) {
+        const listener = this._listeners.find(x => compareArrays(x.headerPrefix, sysExMessage.slice(0, x.headerPrefix.length)));
+        if(listener) {
+            for(let i = 0; i < listener.listeners.length; ++i) {
+                listener.listeners[i](sysExMessage);
+            }
+            /*for(const x of listener.listeners) {
+                x(sysExMessage);
+            }*/
+        }
+//        const messageDesc = Object.values(sysExMessageDescs).find(x => compareArrays(x.messagePrefix, sysExMessage.slice(0, x.messagePrefix.length)));
+//        if (messageDesc) {
+//            const message = new SysExMessage(messageDesc, sysExMessage);
+//            if(this._currentMessage) {
+//                /*if (message.desc !== this._currentMessage.desc) {
+//                    throw new Error("Received a new SysEx message while already busy processing another message.")
+//                }*/
+//                if(message.packetIndex !== (this._currentMessage.packetIndex + 1)) {
+//                    throw new Error("SysEx message received in wrong order.")
+//                }
+//                this._currentMessage.appendMessage(message);
+//            } else {
+//                this._currentMessage = message;
+//            }
+//            /*if (message.packetIndex > 0) {
+//                if (!this._currentMessage) {
+//                    throw new Error("SysEx message received in wrong order.")
+//                }
+//                else if (message.desc !== this._currentMessage.desc) {
+//                    throw new Error("Received a new SysEx message while already busy processing another message.")
+//                }
+//                this._currentMessage.appendMessage(message);
+//            } else if (this._currentMessage) {
+//                throw new Error("Received a new SysEx message while already busy processing another message.")
+//            } else {
+//                this._currentMessage = message;
+//                //if(message === )
+//            }*/
+//            if (this._currentMessage.isLastMessage) {
+//                messageDesc.dispatch(this._currentMessage);
+//                delete this._currentMessage;
+//            }
+//        }
+    }
+    /* eslint-enable no-unused-vars */
 }
 
 const sysExHandler = new SysExHandler();

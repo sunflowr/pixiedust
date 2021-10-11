@@ -89,7 +89,105 @@
         "default": false,
         "view": "checkbox"
       }
+    },
+    "1.2.1": {
+      "magic": {
+        "type": "uint32",
+        "default": 0
+      },
+      "versionMajor": {
+        "type": "uint8",
+        "default": 0
+      },
+      "versionMinor": {
+        "type": "uint8",
+        "default": 0
+      },
+      "versionPatch": {
+        "type": "uint8",
+        "default": 0
+      },
+      "isSyncMaster": {
+        "group": "midi",
+        "name": "Device is master",
+        "desc": "Device sends or listen to start/stop and clock messages",
+        "type": "bool",
+        "default": false,
+        "view": "checkbox"
+      },
+      "remoteMode": {
+        "group": "midi",
+        "name": "Remote mode",
+        "desc": "Use device as a MIDI sound source",
+        "type": "bool",
+        "default": false,
+        "view": "checkbox"
+      },
+      "sendNotes": {
+        "group": "midi",
+        "name": "Send notes",
+        "desc": "Send notes from sequencer while playing",
+        "type": "bool",
+        "default": false,
+        "view": "checkbox"
+      },
+      "transposeOnNoteIn": {
+        "group": "midi",
+        "name": "Transpose on note",
+        "desc": "Transpose pattern when a MIDI note is played",
+        "type": "bool",
+        "default": false,
+        "view": "checkbox"
+      },
+      "patternChangeOnNoteIn": {
+        "group": "midi",
+        "name": "Change pattern on note",
+        "desc": "Change pattern when a MIDI note is played",
+        "type": "bool",
+        "default": false,
+        "view": "checkbox"
+      },
+      "midiChannelIn": {
+        "group": "midi",
+        "name": "MIDI channel in",
+        "desc": "MIDI channel in",
+        "type": "uint8",
+        "default": 1,
+        "view": "range",
+        "range": [
+          1,
+          16
+        ]
+      },
+      "midiChannelOut": {
+        "group": "midi",
+        "name": "MIDI channel out",
+        "desc": "MIDI channel out",
+        "type": "uint8",
+        "default": 1,
+        "view": "range",
+        "range": [
+          1,
+          16
+        ]
+      },
+      "isMidiOmniMode": {
+        "group": "midi",
+        "name": "Omni mode",
+        "desc": "Receive MIDI notes on all channels",
+        "type": "bool",
+        "default": false,
+        "view": "checkbox"
+      },
+      "midiThru": {
+        "group": "midi",
+        "name": "MIDI thru",
+        "desc": "Tunnel all MIDI messages from MIDI In to MIDI Out",
+        "type": "bool",
+        "default": false,
+        "view": "checkbox"
+      }
     }
   },
-  "latest": "1.1.1"
+  "latest": "1.2.1"
 }

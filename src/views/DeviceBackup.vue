@@ -1,5 +1,9 @@
 <template>
   <v-container fluid>
+    <v-alert
+      icon="mdi-alert"
+      border="left"
+      type="warning">This functionality is currently a work in progress and should not be used!</v-alert>
     <v-btn @click="requestDeviceBackup">Backup</v-btn>
     <v-card v-if="!!currentBackup">
       <v-card-title>

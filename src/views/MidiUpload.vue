@@ -1,40 +1,51 @@
 <template>
   <v-container v-if="$MIDI.webMidi">
-    <p>Sorry this will work more reliably in next version</p>
-    <v-file-input
-      :disabled="inputFile != null"
-      v-model="inputFile"
-      accept="application/x-sysex"
-      show-size
-      dense
-      label="Input"
-      placeholder="Select a SysEx file to send"
-    />
-    <v-btn color="primary" :disabled="inputFile == null" large @click="uploadSysExFile">Send</v-btn>
-    <v-dialog v-model="uploadDialog" persistent max-width="640px">
-      <v-card>
-        <v-card-title class="headline">{{ uploadStatus }}</v-card-title>
-        <v-container>
-          <v-row>
-            <v-col>
-              <v-progress-linear :value="uploadProgress" height="10px" rounded striped />
-            </v-col>
-          </v-row>
-          <v-row justify="space-between">
-            <v-col>
-              <div class="text-center">
-                <v-btn
-                  color="primary"
-                  :disabled="inputFile != null"
-                  medium
-                  @click="uploadDialog=false"
-                >Close</v-btn>
-              </div>
-            </v-col>
-          </v-row>
-        </v-container>
+      <v-alert
+        icon="mdi-alert"
+        border="left"
+        type="warning">This functionality is currently a work in progress!</v-alert>
+      <v-card class="mr-auto" max-width="600px">
+        <v-card-title class="headline">
+          Select a SysEx file to send
+        </v-card-title>
+        <v-card-subtitle></v-card-subtitle>
+        <v-card-text>
+          <v-file-input
+            :disabled="inputFile != null"
+            v-model="inputFile"
+            accept="application/x-sysex"
+            show-size
+            dense
+            label="Input"
+            placeholder="Select a SysEx file to send"
+          />
+          <v-btn color="primary" :disabled="inputFile == null" large @click="uploadSysExFile">Send</v-btn>
+        </v-card-text>
       </v-card>
-    </v-dialog>
+      <v-dialog v-model="uploadDialog" persistent max-width="640px">
+        <v-card>
+          <v-card-title class="headline">{{ uploadStatus }}</v-card-title>
+          <v-container>
+            <v-row>
+              <v-col>
+                <v-progress-linear :value="uploadProgress" height="10px" rounded striped />
+              </v-col>
+            </v-row>
+            <v-row justify="space-between">
+              <v-col>
+                <div class="text-center">
+                  <v-btn
+                    color="primary"
+                    :disabled="inputFile != null"
+                    medium
+                    @click="uploadDialog=false"
+                  >Close</v-btn>
+                </div>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-card>
+      </v-dialog>
   </v-container>
 </template>
 

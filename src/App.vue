@@ -177,10 +177,10 @@ export default {
     },
     midiSetDefaultDeviceIfEmpty() {
       if (!this.settings.midiInputDevice) {
-        this.midiSetInputDevice(this.$MIDI.inputDevices[0].id || "");
+        this.midiSetInputDevice(this.$MIDI.inputDevices?.find(x => !x)?.id ?? "");
       }
       if (!this.settings.midiOutputDevice) {
-        this.midiSetOutputDevice(this.$MIDI.outputDevices[0].id || "");
+        this.midiSetOutputDevice(this.$MIDI.outputDevices?.find(x => !x)?.id ?? "");
       }
     },
     /* eslint-disable no-unused-vars */

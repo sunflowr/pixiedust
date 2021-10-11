@@ -335,7 +335,7 @@ export default {
     },
     /* eslint-disable no-unused-vars */
     renderNote(ctx, size, style) {
-      this.renderCell(ctx, size);
+      this.renderCell(ctx, size, style);
     },
     /* eslint-enable no-unused-vars */
     renderPlayHead(ctx, x, height, style) {

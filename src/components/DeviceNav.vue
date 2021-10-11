@@ -4,13 +4,13 @@
       <v-list-item>
         <DeviceInfo
           :device="device"
-          :syncing="!!syncRequest"
+          :loading="loading"
           @sync-request="$emit('device:sync')"
           class="mx-auto pa-0 transparent"
         ></DeviceInfo>
       </v-list-item>
-      <v-list-item :disabled="!!syncRequest">
-        <v-btn color="secondary" block to="/device/settings" :disabled="!device || !!syncRequest">
+      <v-list-item :disabled="loading">
+        <v-btn color="secondary" block to="/device/settings" :disabled="!device || loading">
           Settings
           <v-icon right>mdi-cogs</v-icon>
         </v-btn>
@@ -18,7 +18,7 @@
     </v-list>
     <FileList
       label="Backups"
-      :syncing="!!syncRequest"
+      :loading="loading"
       :files="backupFiles"
       @sync-memory="requestDeviceBackup"
       @select-file="openBackupFile"
@@ -35,6 +35,7 @@ export default {
   name: "DeviceNav",
   props: {
     device: Object,
+    loading: Boolean,
     syncRequest: Object,
     backupFiles: Array
   },

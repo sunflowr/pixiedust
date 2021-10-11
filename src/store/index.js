@@ -25,7 +25,8 @@ export default new Vuex.Store({
   state: {
     settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
     device: null,
-    backupFiles: []
+    backupFiles: [],
+    uploads: []
   },
   getters: {
     settings(state) {
@@ -39,6 +40,9 @@ export default new Vuex.Store({
     },
     backupFiles(state) {
       return state.backupFiles;
+    },
+    uploads(state) {
+      return state.uploads;
     }
   },
   mutations: {
@@ -62,7 +66,10 @@ export default new Vuex.Store({
       if (index >= 0) {
         state.backupFiles[index].name = payload.name;
       }
-    }
+    },
+    updateUploads: (state, uploads) => {
+      state.uploads = uploads;
+    },
   },
   /* eslint-disable no-unused-vars */
   actions: {
@@ -110,6 +117,10 @@ export default new Vuex.Store({
       commit('renameBackupFile', payload);
       //const backupFiles = { ...state.backupFiles, backupFiles: backupFiles }
       //commit('updateBackupFiles', backupFiles);
+    },
+    addUploadData({ commit, state }, uploadedData) {
+      const uploads = [...state.uploads, uploadedData];
+      commit('updateUploads', uploads);
     }
   },
   /* eslint-enable no-unused-vars */
@@ -117,6 +128,6 @@ export default new Vuex.Store({
   },
   plugins: [createPersistedState({
     key: STORAGE_KEY,
-    paths: ['settings', 'backupFiles'],
+    paths: ['settings', 'backupFiles', 'uploads'],
   })]
 });
