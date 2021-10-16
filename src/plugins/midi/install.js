@@ -76,6 +76,7 @@ export function install(Vue) {
                     }
                 }
             },
+            // TODO: Add queuing of sysex messages.
             sendSysEx(midiOutDevice, sysExDataTracks, uploadDelay, onProgress, onResolve, onReject) {
                 if (!this.uploading) {
                     this.uploading = true;

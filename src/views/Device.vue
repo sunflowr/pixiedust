@@ -5,12 +5,21 @@
       :loading="!!syncRequest"
       :syncRequest="syncRequest"
       :backupFiles="backupFiles"
+      :activeBackupFile="activeBackupFile"
       @device:sync="syncDeviceInfo"
+      @device:request-backup="requestDeviceBackup"
+      @device:view-backup-file="(i) => activeBackupFile = i"
     />
+
+    <v-alert v-if="receiveStatus.length !== 0"
+      icon="mdi-alert"
+      border="left"
+      type="error">{{ receiveStatus }}</v-alert>
 
     <v-container fluid>
       <router-view
         :device="device"
+        :disabled="!!syncRequest"
         :loading="!!syncRequest"
         :syncing="!!syncRequest"
         @device:sync="syncDeviceInfo" />
@@ -21,7 +30,14 @@
 <script>
 import DeviceNav from "@/components/DeviceNav.vue";
 import { mapGetters } from "vuex";
-import { SysExMessage_BeginUpload, SysExMessage_Upload, SysExMessage_Ping, sysExMessageDescs } from "@/SysExMessages";
+import {
+  sysExUploadDataTypes,
+  SysExMessage_BeginUpload,
+  SysExMessage_EndUpload,
+  SysExMessage_Upload,
+  SysExMessage_Ping,
+  SysExMessage_Version
+} from "@/SysExMessages";
 import { Version } from "@/version";
 import { Settings } from "@/settings";
 import sysExHandler from "@/SysExHandler";
@@ -44,27 +60,41 @@ export default {
     ...mapGetters(["device"]),
     ...mapGetters(["backupFiles"]),
     midiInDevice() {
-      if (this.$MIDI && this.$MIDI.webMidi) {
-        return this.$MIDI.webMidi.getInputById(this.settings.midiInputDevice);
-      }
-      return null;
+      return this.$MIDI?.webMidi?.getInputById(this.settings.midiInputDevice) ?? null;
     },
     midiOutDevice() {
-      if (this.$MIDI && this.$MIDI.webMidi) {
-        return this.$MIDI.webMidi.getOutputById(this.settings.midiOutputDevice);
-      }
-      return null;
+      return this.$MIDI?.webMidi?.getOutputById(this.settings.midiOutputDevice) ?? null;
     },
+    activeBackupFile: {
+      get() {
+        if(this.$route.name === 'device-backup' && this.$route.params?.id) {
+          return +this.$route.params.id
+        }
+        return 0;
+      },
+      /* eslint-disable no-unused-vars */
+      set(value) {
+        const routePath = "/device/backup/" + value;
+        if (this.$route.path !== routePath) {
+          this.$router.push(routePath);
+        }
+        /*const routePath = "/device/backup/" + value;
+        if (this.$route.path !== routePath) {
+          this.$router.push(routePath);
+        }*/
+      }
+      /* eslint-enable no-unused-vars */
+    }
   },
   mounted() {
-    sysExMessageDescs.DataResponse_Version.addListener(this.onVersion);
-    sysExMessageDescs.DataResponse_Settings.addListener(this.onSettings);
-    sysExMessageDescs.DataResponse_MemoryDump.addListener(this.onMemoryDump);
-
     sysExHandler.addListener(SysExMessage_BeginUpload.headerPrefix, this.onBeginUpload);
+    sysExHandler.addListener(SysExMessage_EndUpload.headerPrefix, this.onEndUpload);
     sysExHandler.addListener(SysExMessage_Upload.headerPrefix, this.onUpload);
     sysExHandler.addListener(SysExMessage_Ping.headerPrefix, this.onPing);
-    sysExMessageDescs.EndUpload.addListener(this.onEndUpload);
+
+    // Deprecated message.
+    sysExHandler.addListener(SysExMessage_Version.headerPrefix, this.onVersion);
+    // TODO: OLD: sysExMessageDescs.DataResponse_Version.addListener(this.onVersion);
 
     // Test make sysex messages.
     /*console.log(SysExMessage_Ping.makeSysEx(0x1f));
@@ -72,30 +102,24 @@ export default {
     console.log(SysExMessage_Upload.makeSysEx(1, 2, new Uint8Array([1, 2, 3])));*/
   },
   beforeDestroy() {
-    sysExMessageDescs.DataResponse_Version.removeListener(this.onVersion);
-    sysExMessageDescs.DataResponse_Settings.removeListener(this.onSettings);
-    sysExMessageDescs.DataResponse_MemoryDump.removeListener(this.onMemoryDump);
-
+    this.stopPing();
     sysExHandler.removeListener(this.onBeginUpload);
+    sysExHandler.removeListener(this.onEndUpload);
     sysExHandler.removeListener(this.onUpload);
     sysExHandler.removeListener(this.onPing);
-    sysExMessageDescs.EndUpload.removeListener(this.onEndUpload);
+
+    // Deprecated message.
+    sysExHandler.removeListener(this.onVersion);
   },
   methods: {
     onVersion(message) {
       if (this.syncRequest) {
         switch (this.syncRequest.receive++) {
           case 0:
-            this.$store.dispatch(
-              "setDeviceBootloaderVersion",
-              new Version(message.data)
-            );
+            this.$store.dispatch("setDeviceBootloaderVersion", new Version(message.data));
             break;
           case 1:
-            this.$store.dispatch(
-              "setDeviceAppVersion",
-              new Version(message.data)
-            );
+            this.$store.dispatch("setDeviceAppVersion", new Version(message.data));
             break;
           default:
             this.clearSyncRequest();
@@ -103,33 +127,6 @@ export default {
         }
       }
     },
-    onSettings(message) {
-      if (this.syncRequest) {
-        switch (this.syncRequest.receive++) {
-          case 2:
-            this.$store.dispatch(
-              "setDeviceSettings",
-              new Settings(message.data)
-            );
-            this.clearSyncRequest();
-            break;
-          default:
-            this.clearSyncRequest();
-            break;
-        }
-      }
-    },
-    onMemoryDump(message) {
-      /* eslint-disable no-console */
-      console.log("memory dump:");
-      console.log(message.data);
-      /* eslint-enable no-console */
-      this.$store.dispatch("addBackupFile", {
-        name: `Backup ${this.backupFiles.length}`,
-        data: Array.from(message.data), // Need to be vanilla array due to localstorage.
-      });
-    },
-    /* eslint-disable no-unused-vars */
     /**
      * Called on start of a SysEx data upload.
      * @param {Uint8Array} sysExData - SysEx message.
@@ -141,11 +138,15 @@ export default {
       }
       this.startUpload(message.dataType, message.totalPackages, message.checksum);
     },
+    /* eslint-disable no-unused-vars */
     /**
      * Called on end of a SysEx data upload.
      * @param {Uint8Array} sysExData - SysEx message.
      */
-    onEndUpload(sysExData) {},
+    onEndUpload(sysExData) {
+      // TODO: Handle end upload message.
+    },
+    /* eslint-enable no-unused-vars */
     /**
      * Called on during SysEx data upload.
      * @param {Uint8Array} sysExData - SysEx message.
@@ -176,7 +177,6 @@ export default {
 
       this.uploadState.packageCount++;
 
-      // TODO: Check for end of upload.
       if( ((this.uploadState.totalPackages < 0) && (message.data.length == 0)) ||
           (this.uploadState.packageCount === this.uploadState.totalPackages)) {
         // Old way of uploading packages didn't use a BeginUpload to specify number of packages,
@@ -209,11 +209,11 @@ export default {
         data: new Uint8Array()
       }
       switch(this.uploadState.dataType) {
-        case SysExMessage_Upload.dataTypes.bootloader: console.log("bootloader"); break;
-        case SysExMessage_Upload.dataTypes.application: console.log("application"); break;
-        case SysExMessage_Upload.dataTypes.emulatorFirmware: console.log("emulatorFirmware"); break;
-        case SysExMessage_Upload.dataTypes.settings: console.log("settings"); break;
-        case SysExMessage_Upload.dataTypes.memoryDump: console.log("memoryDump"); break;
+        case sysExUploadDataTypes.bootloader: console.log("bootloader"); break;
+        case sysExUploadDataTypes.application: console.log("application"); break;
+        case sysExUploadDataTypes.emulatorFirmware: console.log("emulatorFirmware"); break;
+        case sysExUploadDataTypes.settings: console.log("settings"); break;
+        case sysExUploadDataTypes.memoryDump: console.log("memoryDump"); break;
         default: console.log("Unknown data type.");
       } 
     },
@@ -241,14 +241,35 @@ export default {
         }
       }
 
-      this.$store.dispatch("addUploadData", {
-        dataType: this.uploadState.dataType,
-        data: this.uploadState.data,
-      });
-
+      this.uploadRecived(this.uploadState.dataType, this.uploadState.data);
       delete this.uploadState;
     },
-    /* eslint-enable no-unused-vars */
+    uploadRecived(dataType, data) {
+      /* eslint-disable no-console */
+      console.log("Data recived:");
+      console.log(dataType);
+      console.log(data);
+      /* eslint-enable no-console */
+      switch(dataType) {
+      case sysExUploadDataTypes.bootloader:
+        this.$store.dispatch("setDeviceBootloaderVersion", new Version(data));
+        break;
+      case sysExUploadDataTypes.application:
+        this.$store.dispatch("setDeviceAppVersion", new Version(data));
+        this.startPing(true);
+        break;
+      case sysExUploadDataTypes.settings:
+        this.$store.dispatch("setDeviceSettings", new Settings(data));
+        break;
+      case sysExUploadDataTypes.memoryDump:
+        this.$store.dispatch("addBackupFile", {
+          name: `Backup ${this.backupFiles.length}`,
+          data: Array.from(data), // Need to be vanilla array due to localstorage.
+        });
+        break;
+      }
+    },
+    // TODO: Use this.clearSyncRequest(); when received data.
     makeSyncRequest(sysExTracks, timeoutMS) {
       if (this.syncRequest) {
         return;
@@ -280,8 +301,7 @@ export default {
     },
     onSyncTimedOut() {
       if (this.syncRequest) {
-        this.receiveStatus =
-          "No RE-CPU detected, plesae check MIDI device settings and connection.";
+        this.receiveStatus = "No RE-CPU detected, plesae check MIDI device settings and connection.";
       }
       this.clearSyncRequest();
     },
@@ -293,37 +313,30 @@ export default {
     },
     syncDeviceInfo() {
       this.$store.dispatch("clearDevice");
-      this.makeSyncRequest(
-        [
-          new Uint8Array([0x03, 0x03, 0x7c, 0x00]), // Bootloader version.
-          new Uint8Array([0x03, 0x03, 0x7c, 0x01]), // Application version.
-          new Uint8Array([0x03, 0x03, 0x7d, 0x02]), // Settings.
+      this.makeSyncRequest([
+          new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.bootloader]),
+          new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.application]),
+          new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.settings]),
           SysExMessage_Ping.makeSysEx(0x1f).slice(2, -1),
-        ],
-        2000
-      );
+        ], 2000);
     },
     syncSettings() {
       if (!this.device) {
         return;
       }
-      this.makeSyncRequest(
-        [
-          new Uint8Array([0x03, 0x03, 0x7d, 0x02]), // Settings.
-        ],
-        2000
-      );
+      this.makeSyncRequest([
+          new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.settings]),
+        ], 2000);
     },
-    startPing() {
+    startPing(restartPing = false) {
+      if(restartPing && this.pinger) {
+        this.stopPing();
+      }
       if (!this.pinger) {
         const that = this;
-
         this.pinger = setInterval(() => {
           // Ping.
-          this.$MIDI.sendSysEx(
-            this.midiOutDevice,
-            [new Uint8Array([0x03, 0x03, 0x7a])],
-            2000,
+          this.$MIDI.sendSysEx(this.midiOutDevice, [SysExMessage_Ping.makeSysEx(0x1f).slice(2, -1)], 2000,
             () => {
               // Progress.
             },
@@ -340,8 +353,16 @@ export default {
       }
     },
     stopPing() {
-      clearInterval(this.pinger);
-      this.pinger = null;
+      if(this.pinger) {
+        clearInterval(this.pinger);
+        this.pinger = null;
+      }
+    },
+    requestDeviceBackup() {
+      const routePath = "/device/backup";
+      if (this.$route.path !== routePath) {
+        this.$router.push(routePath);
+      }
     },
   },
 };

@@ -79,7 +79,6 @@
 <script>
 import { mapGetters } from "vuex";
 import sysExHandler from "@/SysExHandler";
-import { sysExMessageDescs } from "@/SysExMessages";
 
 export default {
   name: "App",
@@ -144,18 +143,12 @@ export default {
     currentRouteName() {
       return this.$route.meta.title;
     },
-    midiOutDevice() {
-      if (this.$MIDI && this.$MIDI.webMidi) {
-        return this.$MIDI.webMidi.getOutputById(this.settings.midiOutputDevice);
-      }
-      return null;
-    },
     midiInDevice() {
-      if (this.$MIDI && this.$MIDI.webMidi) {
-        return this.$MIDI.webMidi.getInputById(this.settings.midiInputDevice);
-      }
-      return null;
+      return this.$MIDI?.webMidi?.getInputById(this.settings.midiInputDevice) ?? null;
     },
+    midiOutDevice() {
+      return this.$MIDI?.webMidi?.getOutputById(this.settings.midiOutputDevice) ?? null;
+    }
   },
   methods: {
     /* eslint-disable no-unused-vars */
@@ -216,12 +209,10 @@ export default {
       }
       this.midiSetDefaultDeviceIfEmpty();
     },
-    /* eslint-disable no-unused-vars */
     onMidiSysExReceive(ev) {
       this.$router.app.$emit("sysex-receive", ev);
-      sysExHandler.onSysEx(ev.data, sysExMessageDescs);
+      sysExHandler.onSysEx(ev.data);
     },
-    /* eslint-enable no-unused-vars */
     showError(error) {
       this.dialog = { title: "Error", text: error.message };
     },

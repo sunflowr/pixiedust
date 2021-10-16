@@ -3,11 +3,11 @@
     <v-row>
       <v-col cols="12" v-if="!!receiveStatus && receiveStatus.length > 0">{{ receiveStatus }}</v-col>
       <v-col cols="12" v-if="!!device && !syncRequest">
-        <v-card class="mx-auto" max-width="600px" :disabled="isDisabled" :loading="isLoading">
+        <v-card class="mx-auto" max-width="600px" :disabled="disabled" :loading="loading">
           <v-card-title class="headline">
             Settings
             <v-spacer />
-            <v-btn>Save</v-btn>
+            <v-btn>Send to device</v-btn>
           </v-card-title>
           <v-card-subtitle></v-card-subtitle>
           <v-card-text>
@@ -18,7 +18,7 @@
                     v-if="value.type.view === 'checkbox'"
                     :label="value.type.name"
                     :value="value.value"
-                    @value-changed="onValueChanged($event)"
+                    @value-changed="onValueChanged(key, value, $event)"
                   ></DataTypeCheckbox>
                   <DataTypeRange
                     v-else-if="value.type.view === 'range'"
@@ -26,7 +26,7 @@
                     :value="value.value"
                     :min="value.type.range[0]"
                     :max="value.type.range[1]"
-                    @value-changed="onValueChanged($event)"
+                    @value-changed="onValueChanged(key, value, $event)"
                   ></DataTypeRange>
                   <div v-else>{{ value.type.name }}: {{ value.value }}</div>
                 </v-col>
@@ -45,9 +45,6 @@
 
 <script>
 import { mapGetters } from "vuex";
-import { sysExMessageDescs } from "@/SysExMessages";
-import { Version } from "@/version";
-import { Settings } from "@/settings";
 import DataTypeRange from "@/components/DataTypeRange.vue";
 import DataTypeCheckbox from "@/components/DataTypeCheckbox.vue";
 
@@ -56,6 +53,10 @@ export default {
   components: {
     DataTypeRange,
     DataTypeCheckbox
+  },
+  props: {
+    disabled: Boolean,
+    loading: Boolean,
   },
   data() {
     return {
@@ -68,12 +69,6 @@ export default {
     ...mapGetters(["settings"]),
     ...mapGetters(["device"]),
     ...mapGetters(["backupFiles"]),
-    isDisabled() {
-      return !!this.syncRequest;
-    },
-    isLoading() {
-      return !!this.syncRequest;
-    },
     deviceSettings() {
       if (this.device) {
         return this.device.settings;
@@ -97,77 +92,17 @@ export default {
       return null;
     },
     midiInDevice() {
-      if (this.$MIDI && this.$MIDI.webMidi) {
-        return this.$MIDI.webMidi.getInputById(this.settings.midiInputDevice);
-      }
-      return null;
+      return this.$MIDI?.webMidi?.getInputById(this.settings.midiInputDevice) ?? null;
     },
     midiOutDevice() {
-      if (this.$MIDI && this.$MIDI.webMidi) {
-        return this.$MIDI.webMidi.getOutputById(this.settings.midiOutputDevice);
-      }
-      return null;
+      return this.$MIDI?.webMidi?.getOutputById(this.settings.midiOutputDevice) ?? null;
     }
   },
-  mounted() {
-    sysExMessageDescs.DataResponse_Version.addListener(this.onVersion);
-    sysExMessageDescs.DataResponse_Settings.addListener(this.onSettings);
-    sysExMessageDescs.DataResponse_MemoryDump.addListener(this.onMemoryDump);
-  },
-  beforeDestroy() {
-    sysExMessageDescs.DataResponse_Version.removeListener(this.onVersion);
-    sysExMessageDescs.DataResponse_Settings.removeListener(this.onSettings);
-    sysExMessageDescs.DataResponse_MemoryDump.removeListener(this.onMemoryDump);
-  },
+  mounted() {},
+  beforeDestroy() {},
   methods: {
-    onValueChanged(x) {
-      /* eslint-disable no-console */
-      console.log(x);
-      /* eslint-enable no-console */
-    },
-    onVersion(message) {
-      if (this.syncRequest) {
-        switch (this.syncRequest.receive++) {
-          case 0:
-            this.$store.dispatch(
-              "setDeviceBootloaderVersion",
-              new Version(message.data)
-            );
-            break;
-          case 1:
-            this.$store.dispatch(
-              "setDeviceAppVersion",
-              new Version(message.data)
-            );
-            break;
-          default:
-            this.clearSyncRequest();
-            break;
-        }
-      }
-    },
-    onSettings(message) {
-      if (this.syncRequest) {
-        switch (this.syncRequest.receive++) {
-          case 2:
-            this.$store.dispatch(
-              "setDeviceSettings",
-              new Settings(message.data)
-            );
-            this.clearSyncRequest();
-            break;
-          default:
-            this.clearSyncRequest();
-            break;
-        }
-      }
-    },
-    onMemoryDump(message) {
-      this.memoryDump = message.data;
-      /* eslint-disable no-console */
-      console.log("memory dump:");
-      console.log(this.memoryDump);
-      /* eslint-enable no-console */
+    onValueChanged(key, value, evt) {
+      this.$store.dispatch("updateDeviceSetting", { key: key, value: evt });
     },
     makeSyncRequest(sysExTracks, timeoutMS) {
       if (this.syncRequest) {
@@ -210,17 +145,6 @@ export default {
         clearTimeout(this.syncRequest.timeout);
         this.syncRequest = null;
       }
-    },
-    syncDeviceInfo() {
-      this.$store.dispatch("clearDevice");
-      this.makeSyncRequest(
-        [
-          new Uint8Array([0x03, 0x03, 0x7c, 0x00]), // Bootloader version.
-          new Uint8Array([0x03, 0x03, 0x7c, 0x01]), // Application version.
-          new Uint8Array([0x03, 0x03, 0x7d, 0x02]) // Settings.
-        ],
-        2000
-      );
     },
     syncSettings() {
       if (!this.device) {

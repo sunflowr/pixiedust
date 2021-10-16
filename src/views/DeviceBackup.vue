@@ -4,116 +4,129 @@
       icon="mdi-alert"
       border="left"
       type="warning">This functionality is currently a work in progress and should not be used!</v-alert>
-    <v-btn @click="requestDeviceBackup">Backup</v-btn>
-    <v-card v-if="!!currentBackup">
-      <v-card-title>
-        <v-text-field
-          v-model="currentBackupName"
-          label="Name"
-          solo-inverted
-        ></v-text-field>
-      </v-card-title>
-      <v-card-text style="font-family: monospace" v-if="!!hexView">
-        <piano-roll @mouse-move="onMouseMove" @mouse-down="onMouseDown" @mouse-up="onMouseUp" />
-        <div>Data:</div>
-        <div v-for="(line, i) in hexView" :key="i">
-          <span>{{ line }}</span>
-        </div>
-      </v-card-text>
-    </v-card>
+    <v-alert v-if="errorMessage"
+      icon="mdi-alert"
+      border="left"
+      type="error">{{ errorMessage }}</v-alert>
+    <v-row v-if="!!currentBackup">
+      <v-col cols="8">
+        <v-card>
+          <v-card-text style="font-family: monospace" v-if="!!hexData">
+            <!--<piano-roll @mouse-move="onMouseMove" @mouse-down="onMouseDown" @mouse-up="onMouseUp" />-->
+            <v-data-table dense fixed-header :headers="hexHeader" :items="hexData"></v-data-table>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col>
+        <v-card>
+          <v-card-title>
+            <v-text-field
+              v-model="currentBackupName"
+              label="Name"
+              solo-inverted
+            ></v-text-field>
+          </v-card-title>
+          <v-card-text style="font-family: monospace" v-if="!!hexData">
+        <v-btn @click="requestDeviceBackup">Backup</v-btn>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
 <script>
 import { mapGetters } from "vuex";
-import PianoRoll from "@/components/PianoRoll/PianoRoll.vue";
+//import PianoRoll from "@/components/PianoRoll/PianoRoll.vue";
 
 export default {
   name: "DeviceBackup",
-  components: { PianoRoll },
+  //components: { PianoRoll },
+  props: {
+    id: {
+      type: Number,
+      default: 0
+    }
+  },
   data() {
     return {
+      errorMessage: null,
       currentBackup: null,
-      hexView: null,
+      hexHeader: [
+        { text: "Address", value: "address", align: "start", divider: true, width: "100" },
+        { text: "Data", value: "data", align: "start" }
+      ],
+      hexData: []
     };
   },
-  /* eslint-disable no-unused-vars */
   /* eslint-disable no-console */
   mounted() {
     console.log("DeviceBackup:mounted");
-    this.openBackupFile(this.$route.params.id);
-  },
-  beforeRouteUpdate(to, from, next) {
-    console.log("DeviceBackup:beforeRouteUpdate");
-    console.log(to);
-    console.log(from);
-    if (to.params.id && to.params.id >= this.backupFiles.length) {
-      next(new Error("Invalid backup file"));
-    } else {
-      this.openBackupFile(to.params.id);
-      next();
-    }
+    console.log(this.id);
+    this.openBackupFile(this.id);//$route.params.id);
   },
   watch: {
-    backupFiles() {
-      if (
-        (!this.currentBackup || this.currentBackup.data.length == 0) &&
-        this.backupFiles.length > 0
-      ) {
-        this.openBackupFile(0);
-      }
-    },
+    id() {
+      this.openBackupFile(this.id);
+    }
   },
-  /* eslint-enable no-console */
-  /* eslint-enable no-unused-vars */
   computed: {
     ...mapGetters(["settings"]),
     ...mapGetters(["device"]),
     ...mapGetters(["backupFiles"]),
     midiInDevice() {
-      if (this.$MIDI && this.$MIDI.webMidi) {
-        return this.$MIDI.webMidi.getInputById(this.settings.midiInputDevice);
-      }
-      return null;
+      return this.$MIDI?.webMidi?.getInputById(this.settings.midiInputDevice) ?? null;
     },
     midiOutDevice() {
-      if (this.$MIDI && this.$MIDI.webMidi) {
-        return this.$MIDI.webMidi.getOutputById(this.settings.midiOutputDevice);
-      }
-      return null;
+      return this.$MIDI?.webMidi?.getOutputById(this.settings.midiOutputDevice) ?? null;
     },
     currentBackupName: {
       get() {
         return this.currentBackup.name;
       },
-      /* eslint-disable no-unused-vars */
       set(value) {
-        this.$store.dispatch("renameBackupFile", {
-          file: this.currentBackup,
-          name: value,
-        });
+        if(value !== this.currentBackup.name) {
+          this.$store.dispatch("renameBackupFile", {
+            file: this.currentBackup,
+            name: value,
+          });
+        }
       },
-      /* eslint-enable no-unused-vars */
     },
   },
   methods: {
     openBackupFile(id) {
-      if (id && id < this.backupFiles.length) {
-        this.currentBackup = this.backupFiles[id];
+      /*if (
+        (!this.currentBackup || this.currentBackup.data.length == 0) &&
+        this.backupFiles.length > 0
+      ) {
+        this.openBackupFile(0);
+      }*/
+      if (Number.isInteger(id)) {
+        if(id < this.backupFiles.length) {
+          this.errorMessage = null;
+          this.currentBackup = this.backupFiles[id];
+        } else {
+          this.errorMessage = "Backup not found";
+          return;
+        }
       } else {
+        this.errorMessage = null;
         this.currentBackup = { name: "new", data: new Uint8Array() };
+        console.log("new backup");
+        console.log(id);
+        console.log(this.backupFiles);
       }
 
       // Create hex view.
       const data = this.currentBackup.data;
       let line = 0;
-      this.hexView = [];
       for (let i = 0; i < data.length; ++i) {
         if (i % 16 === 0) {
-          line = this.hexView.length;
-          this.hexView.push("0x" + (0 + i.toString(16)).slice(-2) + " ");
+          line = this.hexData.length;
+          this.hexData.push({ address: "0x" + (0 + i.toString(16)).slice(-2) + " ", data: "" })
         }
-        this.hexView[line] += (0 + data[i].toString(16)).slice(-2);
+        this.hexData[line].data += "0x" + (0 + data[i].toString(16)).slice(-2) + ", ";
       }
     },
     makeSyncRequest(sysExTracks, timeoutMS) {

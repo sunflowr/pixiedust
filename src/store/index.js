@@ -71,7 +71,6 @@ export default new Vuex.Store({
       state.uploads = uploads;
     },
   },
-  /* eslint-disable no-unused-vars */
   actions: {
     setMidiInputDevice({ commit, state }, deviceId) {
       const settings = { ...state.settings, midiInputDevice: deviceId };
@@ -91,9 +90,11 @@ export default new Vuex.Store({
       const settings = { ...state.settings, uploadDelay: uploadDelay };
       commit('updateSettings', settings);
     },
+    /* eslint-disable no-unused-vars */
     clearDevice({ commit, state }) {
       commit('updateDevice', null);
     },
+    /* eslint-enable no-unused-vars */
     setDeviceBootloaderVersion({ commit, state }, version) {
       const device = { ...state.device, bootloaderVersion: version };
       commit('updateDevice', device);
@@ -110,6 +111,7 @@ export default new Vuex.Store({
       const backupFiles = [...state.backupFiles, backupFile];
       commit('updateBackupFiles', backupFiles);
     },
+    /* eslint-disable no-unused-vars */
     removeBackupFile({ commit, state }, backupFile) {
       commit('removeBackupFile', backupFile);
     },
@@ -118,12 +120,19 @@ export default new Vuex.Store({
       //const backupFiles = { ...state.backupFiles, backupFiles: backupFiles }
       //commit('updateBackupFiles', backupFiles);
     },
+    /* eslint-enable no-unused-vars */
     addUploadData({ commit, state }, uploadedData) {
       const uploads = [...state.uploads, uploadedData];
       commit('updateUploads', uploads);
+    },
+    updateDeviceSetting({ commit, state }, settingKeyValue) {
+      if(state.device?.settings) {
+        const device = { ...state.device };
+        device.settings[settingKeyValue.key] = settingKeyValue.value;
+        commit('updateDevice', device);
+      }
     }
   },
-  /* eslint-enable no-unused-vars */
   modules: {
   },
   plugins: [createPersistedState({

@@ -1,5 +1,5 @@
 <template>
-  <v-card flat outlined :loading="syncing" :disabled="syncing">
+  <v-card flat outlined :loading="loading" :disabled="disabled">
     <v-card-title>
       <v-icon left>mdi-folder</v-icon>
       <span class="title font-weight-light">{{ label }}</span>
@@ -17,11 +17,16 @@
             </v-list-item-icon>
             <v-list-item-title>Sync from device</v-list-item-title>
           </v-list-item>
-          <v-list-item @click="importFile">
+          <v-list-item @click="openImportFileDialog">
             <v-list-item-icon>
               <v-icon>mdi-file-import</v-icon>
             </v-list-item-icon>
             <v-list-item-title>Import from file</v-list-item-title>
+            <input ref="importInputFile" style="display: none" type="file">
+            <!--<input ref="importInputFile" style="display: none" type="file" accept="application/octet-stream">-->
+            <!--<input ref="importInputFile" style="display: none" type="file" accept="application/x-sysex">-->
+            <!--<input ref="importInputFile" style="display: none" type="file" accept="audio/midi">-->
+            <!--<input ref="importInputFile" style="display: none" type="file" accept="application/json">-->
           </v-list-item>
         </v-list>
       </v-menu>
@@ -29,7 +34,7 @@
     <v-card-text class="pa-0 inset">
       <v-divider />
       <v-list dense>
-        <v-list-item v-for="(file, i) in files" :key="i" @click="$emit('select-file', i, file)">
+        <v-list-item v-for="(file, i) in files" :key="i" :value="i" @click="$emit('select-file', i, file)" :class="{primary: activeFile === i}">
           <v-list-item-content>
             <v-list-item-title>{{ file.name }}</v-list-item-title>
           </v-list-item-content>
@@ -86,23 +91,52 @@
 </style>
 
 <script>
+import { saveAs } from "file-saver";
+
 export default {
-  name: "DataTypeCheckbox",
+  name: "FileList",
   props: {
     label: String,
     files: Array,
-    syncing: Boolean
+    activeFile: Number,
+    loading: Boolean,
+    disabled: Boolean
   },
   methods: {
-    /* eslint-disable no-console */
-    importFile() {
-      console.log(`importFile()`);
+    openImportFileDialog() {
+      const that = this;
+      this.$refs.importInputFile.onchange = changeEvent => { 
+        const file = changeEvent.target.files[0]; 
+        const reader = new FileReader();
+        reader.onload = loadEvent => {
+          const fileData = new Uint8Array(loadEvent.target.result);
+          that.importFile(fileData);
+        };
+        reader.readAsArrayBuffer(file);
+      }
+      this.$refs.importInputFile.click();
+    },
+    importFile(fileData) {
+        this.$store.dispatch("addBackupFile", {
+          name: `Backup ${this.files.length}`,
+          data: Array.from(fileData), // Need to be vanilla array due to localstorage.
+        });
     },
     exportFile(file) {
-      console.log(`exportFile(${file.name})`);
+      // TODO: Better sanitization of filenames when exporting.
+      const filename = file.name.replace(/[^a-z0-9_-]/gi, '_').toLowerCase()
+      saveAs(
+        new Blob([new Uint8Array(file.data)], {
+          type: "application/octet-stream"
+        }),
+        `${filename}.bin`,
+        { autoBom: false }
+      );
     },
+    /* eslint-disable no-console */
     renameFile(file) {
       console.log(`renameFile(${file.name})`);
+      //this.$store.dispatch("renameBackupFile", file);
     },
     deleteFile(file) {
       console.log(`deleteFile(${file.name})`);

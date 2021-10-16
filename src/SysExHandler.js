@@ -293,8 +293,7 @@ class SysExHandler {
         }
     }
 
-    /* eslint-disable no-unused-vars */
-    onSysEx(sysExMessage, sysExMessageDescs) {
+    onSysEx(sysExMessage) {
         const listener = this._listeners.find(x => compareArrays(x.headerPrefix, sysExMessage.slice(0, x.headerPrefix.length)));
         if(listener) {
             for(let i = 0; i < listener.listeners.length; ++i) {
@@ -338,7 +337,6 @@ class SysExHandler {
 //            }
 //        }
     }
-    /* eslint-enable no-unused-vars */
 }
 
 const sysExHandler = new SysExHandler();

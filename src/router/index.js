@@ -25,24 +25,32 @@ const routes = [
         // route level code-splitting
         // this generates a separate chunk (about.[hash].js) for this route
         // which is lazy-loaded when the route is visited.
-        component: () => import(/* webpackChunkName: "about" */ '../views/Device.vue'),
+        component: () => import(/* webpackChunkName: "device" */ '../views/Device.vue'),
         children: [
             {
                 path: '',
                 name: 'device',
-                component: () => import(/* webpackChunkName: "about" */ '../views/DeviceHome.vue'),
+                component: () => import(/* webpackChunkName: "device-home" */ '../views/DeviceHome.vue'),
             },
             {
                 path: 'settings',
-                component: () => import(/* webpackChunkName: "about" */ '../views/DeviceSettings.vue'),
+                component: () => import(/* webpackChunkName: "device-settings" */ '../views/DeviceSettings.vue'),
             },
+            //{
+            //    path: 'backup',
+            //    component: () => import(/* webpackChunkName: "device-backup" */ '../views/DeviceBackup.vue'),
+            //},
             {
-                path: 'backup',
-                component: () => import(/* webpackChunkName: "about" */ '../views/DeviceBackup.vue'),
-            },
-            {
-                path: 'backup/:id',
-                component: () => import(/* webpackChunkName: "about" */ '../views/DeviceBackup.vue'),
+                name: "device-backup",
+                path: 'backup/:id?',
+                component: () => import(/* webpackChunkName: "device-backup" */ '../views/DeviceBackup.vue'),
+                props(route) {
+                    const props = { ...route.params };
+                    if(props.id) {
+                        props.id = +(props.id);
+                    }
+                    return props;
+                }
             }
 
         ]

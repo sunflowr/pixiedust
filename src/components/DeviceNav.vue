@@ -19,10 +19,12 @@
     <FileList
       label="Backups"
       :loading="loading"
+      :disabled="loading"
       :files="backupFiles"
-      @sync-memory="requestDeviceBackup"
-      @select-file="openBackupFile"
-      class="pa-0 transparent"
+      :activeFile="activeBackupFile"
+      @sync-memory="$emit('device:request-backup')"
+      @select-file="(index, file) => $emit('device:view-backup-file', index, file)"
+      class="pa-1 transparent"
     ></FileList>
   </v-navigation-drawer>
 </template>
@@ -37,27 +39,12 @@ export default {
     device: Object,
     loading: Boolean,
     syncRequest: Object,
-    backupFiles: Array
+    backupFiles: Array,
+    activeBackupFile: Number
   },
   components: {
     DeviceInfo,
     FileList
-  },
-  methods: {
-    requestDeviceBackup() {
-      const routePath = "/device/backup";
-      if (this.$route.path !== routePath) {
-        this.$router.push(routePath);
-      }
-    },
-    /* eslint-disable no-unused-vars */
-    openBackupFile(index, file) {
-      const routePath = "/device/backup/" + index;
-      if (this.$route.path !== routePath) {
-        this.$router.push(routePath);
-      }
-    }
-    /* eslint-enable no-unused-vars */
   }
 };
 </script>

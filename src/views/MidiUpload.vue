@@ -97,8 +97,8 @@ export default {
       // Load SysEx file.
       const that = this;
       const fileReader = new FileReader();
-      fileReader.onload = function() {
-        const fileData = new Uint8Array(fileReader.result);
+      fileReader.onload = function(loadEvent) {
+        const fileData = new Uint8Array(loadEvent.target.result);
 
         // Verify that this file contains sysex data.
         if (!sysExUtil.isSysEx(fileData)) {
