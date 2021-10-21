@@ -1,8 +1,7 @@
 <template>
   <v-container fluid>
     <v-row>
-      <v-col cols="12" v-if="!!receiveStatus && receiveStatus.length > 0">{{ receiveStatus }}</v-col>
-      <v-col cols="12" v-if="!!device && !syncRequest">
+      <v-col cols="12" v-if="!!device && !loading">
         <v-card class="mx-auto" max-width="600px" :disabled="disabled" :loading="loading">
           <v-card-title class="headline">
             Settings
@@ -58,13 +57,6 @@ export default {
     disabled: Boolean,
     loading: Boolean,
   },
-  data() {
-    return {
-      syncRequest: null,
-      receiveStatus: "",
-      memoryDump: null
-    };
-  },
   computed: {
     ...mapGetters(["settings"]),
     ...mapGetters(["device"]),
@@ -103,59 +95,6 @@ export default {
   methods: {
     onValueChanged(key, value, evt) {
       this.$store.dispatch("updateDeviceSetting", { key: key, value: evt });
-    },
-    makeSyncRequest(sysExTracks, timeoutMS) {
-      if (this.syncRequest) {
-        return;
-      }
-      const that = this;
-      if (this.$MIDI && this.$MIDI.webMidi) {
-        this.syncRequest = {
-          tracks: sysExTracks,
-          timeout: setTimeout(this.onSyncTimedOut, timeoutMS),
-          receive: 0
-        };
-        this.$MIDI.sendSysEx(
-          this.midiOutDevice,
-          this.syncRequest.tracks,
-          this.settings.uploadDelay,
-          () => {
-            // Progress.
-          },
-          () => {
-            // Resolve.
-          },
-          error => {
-            // Reject.
-            that.receiveStatus = error;
-            that.clearSyncRequest();
-          }
-        );
-      }
-    },
-    onSyncTimedOut() {
-      if (this.syncRequest) {
-        this.receiveStatus =
-          "No RE-CPU detected, plesae check MIDI device settings and connection.";
-      }
-      this.clearSyncRequest();
-    },
-    clearSyncRequest() {
-      if (this.syncRequest) {
-        clearTimeout(this.syncRequest.timeout);
-        this.syncRequest = null;
-      }
-    },
-    syncSettings() {
-      if (!this.device) {
-        return;
-      }
-      this.makeSyncRequest(
-        [
-          new Uint8Array([0x03, 0x03, 0x7d, 0x02]) // Settings.
-        ],
-        2000
-      );
     }
   }
 };

@@ -1,9 +1,66 @@
 import { DataTypes } from "@/datatypes";
 
 export class BinarySerializer {
-    constructor(data) {
+    constructor(data = []) {
         this._data = data;
         this._readPosition = 0;
+    }
+
+    get data() { return new Uint8Array(this._data) }
+
+    /**
+     * Pushes a uint8 array to the serializer.
+     * @param {Uint8Array} array - Array to push to the serializer.
+     * @returns {BinarySerializer} - This object for chaining.
+     */
+    push(array) {
+        const newBuffer = new Uint8Array(this._data.length + array.length);
+        newBuffer.set(this._data);
+        for(let i = 0; i < array.length; ++i) {
+            newBuffer[this._data.length + i] = (array[i] >>> 0) & 0xff;
+        }
+        this._data = newBuffer;
+        return this;
+    }
+
+    /**
+     * Serialize a value in to this binary data stream.
+     * @param {DataTypes} type - Data type of the value.
+     * @param {Number} value - Value to serialize.
+     * @returns {BinarySerializer} - This object for chaining.
+     */
+    serialize(type, value) {
+        switch (type) {
+            case DataTypes.bool:
+                return this.push(new Uint8Array([
+                    ((value ? 1 : 0) >>> 0) & 0xff
+                ]));
+            // TODO: Add support for string24
+            /*case DataTypes.string24:
+                {
+                    const value = new TextDecoder("utf-8").decode(this._data.slice(this._readPosition, this._readPosition + 24));
+                    this._readPosition += 24;
+                    return value;
+                }*/
+            case DataTypes.uint8:
+                return this.push(new Uint8Array([
+                    (value >>> 0) & 0xff
+                ]));
+            case DataTypes.uint16:
+                return this.push(new Uint8Array([
+                    (value >>> 8) & 0xff,
+                    (value >>> 0) & 0xff
+                ]));
+            case DataTypes.uint32:
+                return this.push(new Uint8Array([
+                    (value >>> 24) & 0xff,
+                    (value >>> 16) & 0xff,
+                    (value >>> 8) & 0xff,
+                    (value >>> 0) & 0xff
+                ]));
+            default:
+                throw TypeError("Unknown data type.");
+        }
     }
 
     deserialize(type) {

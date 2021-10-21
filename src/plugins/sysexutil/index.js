@@ -1,5 +1,9 @@
 //import { checksumUtil } from '@/plugins/checksumutil';
 
+import { DataTypes } from "@/datatypes";
+import { BinarySerializer } from "../../BinarySerializer";
+import { checksumUtil } from "../checksumutil";
+
 
 class SysExUtil {
     /**
@@ -32,6 +36,53 @@ class SysExUtil {
     }
 
     /**
+     * Creates a sysex begin upload header with the specified type and package id.
+     * @param {boolean} withSysExHeader If we should include the SysEx header as well
+     * @param {sysExTypes} type
+     * @param {Number} totalPackages
+     * @param {Number} checksum
+     * @returns {Uint8Array}
+     */
+     makeBeginUploadPackage(withSysExHeader, type, totalPackages, finalChecksum) {
+        const header = [];
+
+        if (withSysExHeader) {
+            // SysEx start.
+            header.push(0xf0);
+            // Manufacturer Id - currently using the "prototyping" ID 0x7d.
+            header.push(0x7d);
+        }
+
+        // Device id.
+        header.push(0x03);
+        header.push(0x03);
+
+        // BeginUpload Command id.
+        header.push(0x7e);
+        header.push(0x7f);
+        header.push(0x00);
+
+        // Data type.
+        header.push(type & 0x7f);
+
+        const serializer = new BinarySerializer();
+        serializer.serialize(DataTypes.uint32, totalPackages);
+        serializer.serialize(DataTypes.uint32, finalChecksum);
+        serializer.serialize(DataTypes.uint8, this.calculateDataChecksum(serializer.data));
+        const data = this.nibbelize(serializer.data);
+        for(let d of data) {
+            header.push(d);
+        }
+
+        if (withSysExHeader) {
+            // SysEx stop.
+            header.push(0xf7);
+        }
+
+        return new Uint8Array(header);
+    }
+
+    /**
      * Creates a sysex header with the specified type and package id.
      * @param {boolean} withSysExHeader If we should include the SysEx header as well
      * @param {sysExTypes} type
@@ -54,26 +105,29 @@ class SysExUtil {
 
         // Command id.
         switch (type) {
-            case sysExTypes.uploadBootloader:
-                header.push(0x7e);
-                header.push(0x01);
-                break;
-            case sysExTypes.uploadApplication:
-                header.push(0x7e);
-                header.push(0x02);
-                break;
-            case sysExTypes.uploadEmuFW:
-                header.push(0x7e);
-                header.push(0x03);
-                break;
-            case sysExTypes.reset:
-                header.push(0x7f);
-                header.push(0x00);
-                break;
-            case sysExTypes.test:
-            default:
-                header.push(0x7f);
-                break;
+        /*case sysExTypes.uploadBootloader:
+            header.push(0x7e);
+            header.push(0x01);
+            break;
+        case sysExTypes.uploadApplication:
+            header.push(0x7e);
+            header.push(0x02);
+            break;
+        case sysExTypes.uploadEmuFW:
+            header.push(0x7e);
+            header.push(0x03);
+            break;
+        case sysExTypes.reset:
+            header.push(0x7f);
+            header.push(0x00);
+            break;
+        case sysExTypes.test:
+            header.push(0x7f);
+            break;*/
+        default:
+            header.push(0x7e);
+            header.push(type & 0x7f);
+            break;
         }
 
         // Package id.
@@ -105,8 +159,8 @@ class SysExUtil {
     /**
      * Calculates the checksum of a data array.
      * @param {Uint8Array} data Data to calculate checksum on.
-     * @param {number} end Length of the data to calculate checksum.
-     * @returns {number}
+     * @param {Number} end Length of the data to calculate checksum.
+     * @returns {Number}
      */
     calculateDataChecksum(data, end = data.length) {
         //(data.length - 1)
@@ -125,24 +179,14 @@ class SysExUtil {
      * @param {number} pageSize
      * @param {Uint8Array} data
      */
-    convertToSysEx(type, withHeaders, pageSize, data) {
-        pageSize *= 2;
-
-        //const checksum = checksumUtil.calculateCRC(data);
-        //console.log(checksum.toString(16));
-
+    convertToSysEx(type, withHeaders, packetSize, data, reset = true) {
         let tracks = [];
-        for (let i = 0; i < data.length; i += pageSize) {
-            // Slice and padd the data.
-            const dataSlice = data.slice(i, i + pageSize);
-            const paddedData = new Uint8Array(dataSlice.length + (pageSize - dataSlice.length));
-            paddedData.set(dataSlice);
-            paddedData.fill(0x00, dataSlice.length);
-
-            // Make track sections.
+        for (let i = 0; i < data.length;) {
             const trackHeader = this.makeHeader(withHeaders, type, tracks.length);
-            const trackData = this.nibbelize(paddedData);
-            const trackFooter = this.makeFooter(withHeaders, this.calculateDataChecksum(paddedData));
+            const dataSize = Math.min(packetSize - (trackHeader.length + 2) >>> 1, data.length - i);
+            const dataSlice = data.slice(i, i + dataSize);
+            const trackData = this.nibbelize(dataSlice);
+            const trackFooter = this.makeFooter(withHeaders, this.calculateDataChecksum(dataSlice));
 
             // Make track.
             const track = new Uint8Array(trackHeader.length + trackData.length + trackFooter.length);
@@ -150,10 +194,15 @@ class SysExUtil {
             track.set(trackData, trackHeader.length)
             track.set(trackFooter, trackHeader.length + trackData.length);
             tracks.push(track);
+
+            i += dataSize;
         }
 
+        // Add begin upload header.
+        tracks.unshift(this.makeBeginUploadPackage(withHeaders, type, tracks.length, checksumUtil.calculateCRC(data)));
+
         // Add reset command.
-        {
+        if(reset) {
             const trackResetHeader = this.makeHeader(withHeaders, sysExTypes.reset);
             const trackReset = new Uint8Array(trackResetHeader.length + (withHeaders ? 1 : 0));
             trackReset.set(trackResetHeader)

@@ -2,13 +2,14 @@
   <v-container fluid>
     <DeviceNav
       :device="device"
-      :loading="!!syncRequest"
-      :syncRequest="syncRequest"
+      :loading="sysExResponsePromises.length > 0"
       :backupFiles="backupFiles"
       :activeBackupFile="activeBackupFile"
       @device:sync="syncDeviceInfo"
       @device:request-backup="requestDeviceBackup"
       @device:view-backup-file="(i) => activeBackupFile = i"
+      @device:upload-backup-file="uploadDeviceBackup"
+      @device:export-backup-file="exportBackupFile"
     />
 
     <v-alert v-if="receiveStatus.length !== 0"
@@ -19,15 +20,19 @@
     <v-container fluid>
       <router-view
         :device="device"
-        :disabled="!!syncRequest"
-        :loading="!!syncRequest"
-        :syncing="!!syncRequest"
-        @device:sync="syncDeviceInfo" />
+        :disabled="sysExResponsePromises.length > 0"
+        :loading="sysExResponsePromises.length > 0"
+        :syncing="sysExResponsePromises.length > 0"
+        @device:sync="syncDeviceInfo"
+        @device:request-backup="requestDeviceBackup"
+        @device:restore-backup="uploadDeviceBackup" />
     </v-container>
   </v-container>
 </template>
 
 <script>
+import { saveAs } from "file-saver";
+import { PromiseQueue } from "@/plugins/PromiseQueue";
 import DeviceNav from "@/components/DeviceNav.vue";
 import { mapGetters } from "vuex";
 import {
@@ -40,7 +45,60 @@ import {
 } from "@/SysExMessages";
 import { Version } from "@/version";
 import { Settings } from "@/settings";
+import { sysExUtil } from "@/plugins/sysexutil";
 import sysExHandler from "@/SysExHandler";
+import { checksumUtil } from "@/plugins/checksumutil";
+
+
+class SysExRequestJob {
+  constructor(sysExData, timeOutMs, evalCompleted, resolve, timeOutReject) {
+    this._sysExData = sysExData;
+    this._timeOutMs = timeOutMs;
+    this._timeOutId = null;
+    this._evalCompleted = evalCompleted;
+    this._resolve = resolve;
+    this._timeOutReject = timeOutReject;
+  }
+
+  get sysExData() { return this._sysExData; }
+  get isCompleted() { return this._timeOutId === null; }
+
+  start() {
+    this.stop();
+    this._timeOutId = setTimeout(() => {
+      this.stop();
+      this._timeOutReject(new Error("SysEx request timed out waiting on response."));
+    }, this._timeOutMs);
+  }
+  
+  stop() {
+    if(this._timeOutId) {
+      clearTimeout(this._timeOutId);
+      this._timeOutId = null;
+    }
+  }
+
+  evalCompleted(data) {
+    return this._evalCompleted(data);
+  }
+
+  resolve() {
+    this.stop();
+    this._resolve();
+  }
+}
+
+/*function arrayEquals(a, b) {
+    if (!Array.isArray(a)) { return false; }
+    if (!Array.isArray(b)) { return false; }
+    if (a === b) { return true; }
+    if ((!a) || (!b)) { return false; }
+    if (a.length !== b.length) { return false; }
+    for (let i = 0; i < a.length; ++i) {
+        if (a[i] !== b[i]) { return false; }
+    }
+    return true;
+}*/
 
 export default {
   name: "Device",
@@ -52,7 +110,10 @@ export default {
       syncRequest: null,
       receiveStatus: "",
       pinger: null,
-      uploadState: null
+      uploadState: null,
+      syncing: false,
+      sysExRequests: new PromiseQueue(),
+      sysExResponsePromises: []
     };
   },
   computed: {
@@ -112,6 +173,7 @@ export default {
     sysExHandler.removeListener(this.onVersion);
   },
   methods: {
+    // Deprecated message.
     onVersion(message) {
       if (this.syncRequest) {
         switch (this.syncRequest.receive++) {
@@ -122,7 +184,7 @@ export default {
             this.$store.dispatch("setDeviceAppVersion", new Version(message.data));
             break;
           default:
-            this.clearSyncRequest();
+            this.clearSync();
             break;
         }
       }
@@ -256,7 +318,7 @@ export default {
         break;
       case sysExUploadDataTypes.application:
         this.$store.dispatch("setDeviceAppVersion", new Version(data));
-        this.startPing(true);
+        //this.startPing(true);
         break;
       case sysExUploadDataTypes.settings:
         this.$store.dispatch("setDeviceSettings", new Settings(data));
@@ -268,65 +330,79 @@ export default {
         });
         break;
       }
+
+      this.processResponse({dataType: dataType});
     },
-    // TODO: Use this.clearSyncRequest(); when received data.
-    makeSyncRequest(sysExTracks, timeoutMS) {
-      if (this.syncRequest) {
-        return;
+    sync(sysExData, timeOutMs, evalCompleted) {
+      if ((this.$MIDI?.webMidi ?? false) == false) {
+        throw new Error("No WebMIDI.");
       }
-      const that = this;
-      if (this.$MIDI && this.$MIDI.webMidi) {
-        this.syncRequest = {
-          tracks: sysExTracks,
-          timeout: setTimeout(this.onSyncTimedOut, timeoutMS),
-          receive: 0,
-        };
-        this.$MIDI.sendSysEx(
-          this.midiOutDevice,
-          this.syncRequest.tracks,
-          this.settings.uploadDelay,
-          () => {
-            // Progress.
-          },
-          () => {
-            // Resolve.
-          },
-          (error) => {
-            // Reject.
-            that.receiveStatus = error;
-            that.clearSyncRequest();
-          }
-        );
-      }
+      return this.sysExRequests.queue(() => new Promise((resolve, reject) => {
+        this.receiveStatus = "";
+        this.$MIDI.sendSysExAsync(this.midiOutDevice, sysExData, () => {
+          const job = new SysExRequestJob(sysExData, timeOutMs, evalCompleted, resolve, reject);
+          this.sysExResponsePromises.push(job);
+          job.start();
+        });
+      }));
     },
-    onSyncTimedOut() {
-      if (this.syncRequest) {
-        this.receiveStatus = "No RE-CPU detected, plesae check MIDI device settings and connection.";
-      }
-      this.clearSyncRequest();
+    clearSync() {
+        this.sysExRequests.stop();
+        for(let o of this.sysExResponsePromises) {
+          o.stop();
+        }
+        this.sysExResponsePromises = [];
     },
-    clearSyncRequest() {
-      if (this.syncRequest) {
-        clearTimeout(this.syncRequest.timeout);
-        this.syncRequest = null;
+    processResponse(data) {
+      for(let i = 0; i < this.sysExResponsePromises.length; ++i) {
+        const sysExResponsePromise = this.sysExResponsePromises[i];
+        if(sysExResponsePromise.evalCompleted(data)) {
+          this.sysExResponsePromises.splice(i);
+          sysExResponsePromise.resolve();
+          return;
+        }
       }
     },
     syncDeviceInfo() {
       this.$store.dispatch("clearDevice");
-      this.makeSyncRequest([
-          new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.bootloader]),
-          new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.application]),
-          new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.settings]),
-          SysExMessage_Ping.makeSysEx(0x1f).slice(2, -1),
-        ], 2000);
+      this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.bootloader]), 5000, data => data.dataType === sysExUploadDataTypes.bootloader)
+      .then(() => this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.application]), 5000, data => data.dataType === sysExUploadDataTypes.application))
+      .then(() => this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.settings]), 5000, data => data.dataType === sysExUploadDataTypes.settings))
+      //.then( PING ) SysExMessage_Ping.makeSysEx(0x1f).slice(2, -1),
+      .catch(err => {
+        this.clearSync();
+        this.receiveStatus = err.message;
+        this.receiveStatus = "No RE-CPU detected, plesae check MIDI device settings and connection.";
+      });
     },
     syncSettings() {
       if (!this.device) {
         return;
       }
-      this.makeSyncRequest([
-          new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.settings]),
-        ], 2000);
+      this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.settings]), 5000, data => data.dataType === sysExUploadDataTypes.settings)
+      .catch(err => {
+        this.clearSync();
+        this.receiveStatus = err.message;
+        this.receiveStatus = "No RE-CPU detected, plesae check MIDI device settings and connection.";
+      });
+    },
+    requestMemory() {
+    },
+    requestDeviceBackup() {
+      if (!this.device) {
+        return;
+      }
+      this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.memoryDump]), 5000, data => data.dataType === sysExUploadDataTypes.memoryDump)
+      .catch(err => {
+        this.clearSync();
+        this.receiveStatus = err.message;
+        this.receiveStatus = "No RE-CPU detected, plesae check MIDI device settings and connection.";
+      });
+
+      /*const routePath = "/device/backup/sync";
+      if (this.$route.path !== routePath) {
+        this.$router.push(routePath);
+      }*/
     },
     startPing(restartPing = false) {
       if(restartPing && this.pinger) {
@@ -345,8 +421,8 @@ export default {
             },
             (error) => {
               // Reject.
+              that.clearSync();
               that.receiveStatus = error;
-              that.clearSyncRequest();
             }
           );
         }, 10000);
@@ -358,12 +434,43 @@ export default {
         this.pinger = null;
       }
     },
-    requestDeviceBackup() {
-      const routePath = "/device/backup";
-      if (this.$route.path !== routePath) {
-        this.$router.push(routePath);
+    uploadDeviceBackup(fileIndex = undefined) {
+      if(!fileIndex) {
+        fileIndex = this.activeBackupFile;
       }
+      const syxExData = sysExUtil.convertToSysEx(sysExUploadDataTypes.memoryDump, true, 512, this.backupFiles[fileIndex].data, false);
+      /* eslint-disable no-console */
+      console.log(syxExData);
+      /* eslint-enable no-console */
     },
+    exportBackupFile(fileIndex) {
+      const file =this.backupFiles[fileIndex];
+      const exportSysEx = true;
+
+      const exportData = [];
+      if(exportSysEx) {
+        console.log(SysExMessage_BeginUpload.makeSysEx(sysExUploadDataTypes.memoryDump, 7, checksumUtil.calculateCRC(file.data)));
+        const syxExTracks = sysExUtil.convertToSysEx(sysExUploadDataTypes.memoryDump, true, 512, file.data, false);
+        let data = new Uint8Array();
+        for(let i = 0; i < syxExTracks.length; ++i) {
+          const data2 = new Uint8Array(data.length + syxExTracks[i].length);
+          data2.set(data);
+          data2.set(syxExTracks[i], data.length);
+          data = data2;
+        }
+        console.log(data);
+        exportData.push(new Uint8Array(data));
+      } else {
+        exportData.push(new Uint8Array(file.data));
+      }
+
+      console.log(exportData);
+
+      // TODO: Better sanitization of filenames when exporting.
+      const filename = file.name.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + (exportSysEx ? ".syx" : ".bin");
+      saveAs(new Blob(exportData, { type: "application/octet-stream" }), filename, { autoBom: false }
+      );
+    }
   },
 };
 </script>

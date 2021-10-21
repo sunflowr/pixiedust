@@ -46,6 +46,7 @@ const routes = [
                 component: () => import(/* webpackChunkName: "device-backup" */ '../views/DeviceBackup.vue'),
                 props(route) {
                     const props = { ...route.params };
+                    props.idString = props.id;
                     if(props.id) {
                         props.id = +(props.id);
                     }

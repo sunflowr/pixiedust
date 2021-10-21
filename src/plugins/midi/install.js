@@ -2,6 +2,90 @@ import WebMidi from "webmidi";
 
 export let _Vue;
 
+/* eslint-disable no-unused-vars */
+class SysExJob {
+    /**
+     * 
+     * @param {Uint8Array} sysExData - SysEx data to send.
+     * @param {Function} init - Optional function to call on init.
+     * @param {Function} resolve - Optional function to call on resolve.
+     * @param {Function} reject - Optional function to call on reject.
+     * @param {Object} state - Optional internal state of job.
+     */
+    constructor(sysExData, init, resolve, reject, state) {
+        this.sysExData = sysExData;
+        this.init = sysExData;
+        this.resolve = sysExData;
+        this.reject = sysExData;
+        this.state = state;
+    }
+}
+/* eslint-disable no-unused-vars */
+
+class Queue {
+    constructor() {
+        this._queue = [];
+        this._working = false;
+        this.stop = false;
+    }
+
+    /**
+     * Queues a promise. Also execute it if queue is empty.
+     * @param {Function} promise 
+     * @returns {Promise}
+     */
+    queue(promise) {
+        const that = this;
+        return new Promise((resolve, reject) => {
+            that._queue.push({
+                promise: promise,
+                resolve: resolve,
+                reject: reject
+            });
+            that.dequeue();
+        });
+    }
+
+    /**
+     * Dequeue and execute a promise if not busy.
+     */
+    dequeue() {
+        if(this._working) {
+            return;
+        }
+        if(this.stop) {
+            this._queue = [];
+            this.stop = false;
+            return;
+        }
+        const item = this._queue.shift();
+        if(!item) {
+            return;
+        }
+        try
+        {
+            const that = this;
+            this._working = true;
+            item.promise()
+            .then(value => {
+                that._working = false;
+                item.resolve(value);
+                that.dequeue();
+            })
+            .catch(err => {
+                that._working = false;
+                item.reject(err);
+                that.dequeue();
+            });
+        } catch(err) {
+            this._working = false;
+            item.reject(err);
+            this.dequeue();
+        }
+    }
+}
+
+
 export function install(Vue) {
     if (install.installed && _Vue === Vue) {
         return;
@@ -19,7 +103,8 @@ export function install(Vue) {
                 outputDevices: [],
                 uploadStatus: "",
                 uploading: false,
-                uploadProgress: 0
+                uploadProgress: 0,
+                sysExSendQueue: new Queue()
             }
         },
         created() {
@@ -75,6 +160,37 @@ export function install(Vue) {
                         });
                     }
                 }
+            },
+            /**
+             * A delayed promise.
+             * @param {Number} ms - Delay time in milliseconds.
+             * @returns {Promise} Promise of the delay.
+             */
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            },
+            /**
+             * 
+             * @param {*} midiOutDevice - MIDI output device.
+             * @param {Uint8Array} sysExData - SysEx data to send.
+             * @returns {Promise} Promise of the SysEx send.
+             */
+            sendSysExAsync(midiOutDevice, sysExData, init) {
+                return this.sysExSendQueue.queue(() => new Promise((resolve, reject) => {
+                    try
+                    {
+                        init?.();
+                        const trackTimeMS = ((sysExData.length / (31250 / 8)) * 1000) + 10;
+                        const extraTrackDelayMS = 10;
+                        midiOutDevice.sendSysex(0x7d, Array.from(sysExData));
+                        setTimeout(() => { resolve(); }, trackTimeMS + extraTrackDelayMS);
+                    } catch(err) {
+                        reject(err);
+                    }
+                }));
+            },
+            processSysExQueue() {
+                this.sysExSendQueue.dequeue();
             },
             // TODO: Add queuing of sysex messages.
             sendSysEx(midiOutDevice, sysExDataTracks, uploadDelay, onProgress, onResolve, onReject) {

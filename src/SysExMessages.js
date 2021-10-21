@@ -4,6 +4,8 @@
 //import { SysExMessageBase, SysExMessageDesc } from "@/SysExHandler";
 import { SysExMessageBase } from "@/SysExHandler";
 import { sysExUtil } from "@/plugins/sysexutil";
+import { BinarySerializer } from "@/BinarySerializer";
+import { DataTypes } from "@/datatypes";
 
 // TODO: Remove these old notes.
 // TODO: Add versioning.
@@ -145,14 +147,15 @@ export class SysExMessage_BeginUpload extends SysExMessageBase {
 
     /** Creates a SysEx message */
     static makeSysEx(dataType, totalPackages, checksum) {
-        const headerPrefix  = SysExMessage_BeginUpload.headerPrefix;
-        const sysExData = new Uint8Array(headerPrefix.length + 18);
-        sysExData.set(headerPrefix);
-        sysExData[headerPrefix.length] = ((dataType & 0x7f) >>> 0);
-        sysExData.set(sysExUtil.nibbelize(SysExMessageBase.uint32ToUint8Array(totalPackages)), headerPrefix.length + 1);
-        sysExData.set(sysExUtil.nibbelize(SysExMessageBase.uint32ToUint8Array(checksum)), headerPrefix.length + 9);
-        sysExData[sysExData.length - 1] = (0xf7 >>> 0);
-        return sysExData;
+        const serializer = new BinarySerializer(SysExMessage_BeginUpload.headerPrefix);
+        serializer.serialize(DataTypes.uint8, dataType) & 0x7f;
+        const dataSerializer = new BinarySerializer();
+        dataSerializer.serialize(DataTypes.uint32, totalPackages);
+        dataSerializer.serialize(DataTypes.uint32, checksum);
+        dataSerializer.serialize(DataTypes.uint8, sysExUtil.calculateDataChecksum(dataSerializer.data));
+        serializer.push(sysExUtil.nibbelize(dataSerializer.data));
+        serializer.serialize(DataTypes.uint8, 0xf7);
+        return serializer.data;
     }
 
     /**
@@ -161,15 +164,20 @@ export class SysExMessage_BeginUpload extends SysExMessageBase {
      */
     constructor(sysExData) {
         super(SysExMessage_BeginUpload.headerPrefix, sysExData);
+        if(sysExData.length !== 27) {
+            throw new Error("Invalid begin upload message.");
+        }
         this.parse();
     }
 
     /** Parses data. Silly redirection of constructor as there seem to be some issue with extend and base fields. */
     parse() {
         this._dataType = this._data[0];
-        this._totalPackages = SysExMessageBase.toUint32(sysExUtil.denibbelize(this._data.slice(1, 9)));
-        this._checksum = SysExMessageBase.toUint32(sysExUtil.denibbelize(this._data.slice(9, 17)));
-        this._data = this._data.slice(1);
+        this._data = sysExUtil.denibbelize(this._data.slice(1, -1));
+        const deserializer = new BinarySerializer(this._data);
+        this._totalPackages = deserializer.deserialize(DataTypes.uint32);
+        this._finalChecksum = deserializer.deserialize(DataTypes.uint32);
+        this._checksum = deserializer.deserialize(DataTypes.uint16);
     }
 
     /** Returns the data type for the upload message. */
@@ -177,7 +185,7 @@ export class SysExMessage_BeginUpload extends SysExMessageBase {
     /** Returns the expected number of packages on the upload message. */
     get totalPackages() { return this._totalPackages; }
     /** Returns the expected checksum of the fully uploaded message. */
-    get checksum() { return this._checksum; }
+    get checksum() { return this._finalChecksum; }
 
     /**
      * Takes a array of package messages to calculate total checksum of and verify it against expected checksum. 
@@ -202,6 +210,7 @@ export class SysExMessage_EndUpload extends SysExMessageBase {
         const sysExData = new Uint8Array(headerPrefix.length + 18);
         sysExData.set(headerPrefix);
         sysExData[headerPrefix.length] = ((dataType & 0x7f) >>> 0);
+        // TODO: Remove me later and use BinarySerializer.
         sysExData.set(sysExUtil.nibbelize(SysExMessageBase.uint32ToUint8Array(totalPackages)), headerPrefix.length + 1);
         sysExData.set(sysExUtil.nibbelize(SysExMessageBase.uint32ToUint8Array(checksum)), headerPrefix.length + 9);
         sysExData[sysExData.length - 1] = (0xf7 >>> 0);

@@ -38,20 +38,7 @@ export class SysExMessageBase {
     /** Returns the data of the message. */
     get data() { return this._data; }
 
-    /** Converts a array of two elements in to a uint16 value.
-     * 
-     * @param {Uint8Array} data - Data to convert.
-     * @returns {Number} A uint16 value.
-    */
-    static toUint16(data) { return ((data[0] << 8) | (data[1] << 0)) >>> 0; }
-
-    /** Converts a array of four elements in to a uint32 value.
-     * 
-     * @param {Uint8Array} data - Data to convert.
-     * @returns {Number} A uint32 value.
-    */
-    static toUint32(data) { return ((data[0] << 24) | (data[1] << 16) | (data[2] << 8) | (data[3] << 0)) >>> 0; }
-
+    // TODO: Remove me later and use BinarySerializer.
     /** Converts a uint16 value to a uint8 array.
      * 
      * @param {Number} uint16value - Value to convert.
@@ -64,6 +51,7 @@ export class SysExMessageBase {
         return val;
     }
 
+    // TODO: Remove me later and use BinarySerializer.
     /** Converts a uint32 value to a uint8 array.
      * 
      * @param {Number} uint32value - Value to convert.

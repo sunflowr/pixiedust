@@ -46,13 +46,13 @@
                 </v-btn>
               </template>
               <v-list dense>
-                <v-list-item @click="exportFile(file)">
+                <v-list-item @click="$emit('file:upload', i, file)">
                   <v-list-item-icon>
                     <v-icon>mdi-file-export</v-icon>
                   </v-list-item-icon>
                   <v-list-item-title>Export to device</v-list-item-title>
                 </v-list-item>
-                <v-list-item @click="exportFile(file)">
+                <v-list-item @click="$emit('file:export', i, file)">
                   <v-list-item-icon>
                     <v-icon>mdi-file-export</v-icon>
                   </v-list-item-icon>
@@ -91,8 +91,6 @@
 </style>
 
 <script>
-import { saveAs } from "file-saver";
-
 export default {
   name: "FileList",
   props: {
@@ -121,17 +119,6 @@ export default {
           name: `Backup ${this.files.length}`,
           data: Array.from(fileData), // Need to be vanilla array due to localstorage.
         });
-    },
-    exportFile(file) {
-      // TODO: Better sanitization of filenames when exporting.
-      const filename = file.name.replace(/[^a-z0-9_-]/gi, '_').toLowerCase()
-      saveAs(
-        new Blob([new Uint8Array(file.data)], {
-          type: "application/octet-stream"
-        }),
-        `${filename}.bin`,
-        { autoBom: false }
-      );
     },
     /* eslint-disable no-console */
     renameFile(file) {

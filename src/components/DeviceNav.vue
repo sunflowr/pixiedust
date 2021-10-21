@@ -24,6 +24,8 @@
       :activeFile="activeBackupFile"
       @sync-memory="$emit('device:request-backup')"
       @select-file="(index, file) => $emit('device:view-backup-file', index, file)"
+      @file:upload="(index, file) => $emit('device:upload-backup-file', index, file)"
+      @file:export="(index, file) => $emit('device:export-backup-file', index, file)"
       class="pa-1 transparent"
     ></FileList>
   </v-navigation-drawer>
@@ -38,7 +40,6 @@ export default {
   props: {
     device: Object,
     loading: Boolean,
-    syncRequest: Object,
     backupFiles: Array,
     activeBackupFile: Number
   },

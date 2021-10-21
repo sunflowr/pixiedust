@@ -31,6 +31,27 @@
 <script>
 //import VuePerfectScrollbar from "vue-perfect-scrollbar";
 
+/* eslint-disable no-unused-vars */
+const ic3Offset = 0x400;
+const ic4Offset = 0x800;
+const groupOffset = [
+  ic3Offset | 0x000,
+  ic3Offset | 0x000,
+  ic3Offset | 0x080,
+  ic3Offset | 0x080,
+  ic4Offset | 0x000,
+  ic4Offset | 0x000,
+  ic4Offset | 0x080
+];
+const sectionOffset = [ 0x000, 0x100 ]; // A, B
+const patternOffset = [ 0x00, 0x40, 0x20, 0x60, 0x10, 0x50, 0x30, 0x70 ];
+const stepIndices = [
+  0x000, 0x004, 0x002, 0x006, 0x001, 0x005, 0x003, 0x007,
+  0x200, 0x204, 0x202, 0x206, 0x201, 0x205, 0x203, 0x207,
+];
+const noteLabels = [ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C'" ];
+/* eslint-enable no-unused-vars */
+
 export default {
   name: "PianoRoll",
   components: {
@@ -38,10 +59,10 @@ export default {
   },
   data() {
     return {
+      selection: null,
       settings: {
         maxScrollbarLength: 60,
       },
-      ctx: null,
       gridPitches: [
         "C",
         "C#",
@@ -90,83 +111,35 @@ export default {
           stroke: this.$vuetify.theme.currentTheme.selectedNoteStroke,
         }
       },
-      notes: [
-        {
-          note: 1,
-          pos: 0,
-          length: 2,
-          up: true,
-          down: false,
-          acc: true,
-          slide: false,
-          time: 0,
-        },
-        {
-          note: 3,
-          pos: 1,
-          length: 3,
-          up: true,
-          down: false,
-          acc: true,
-          slide: false,
-          time: 0,
-        },
-        {
-          note: 5,
-          pos: 3,
-          length: 1,
-          up: true,
-          down: false,
-          acc: true,
-          slide: false,
-          time: 0,
-        },
-        {
-          note: 5,
-          pos: 5,
-          length: 1,
-          up: true,
-          down: false,
-          acc: true,
-          slide: false,
-          time: 0,
-        },
-        {
-          note: 10,
-          pos: 6,
-          length: 1,
-          up: true,
-          down: false,
-          acc: true,
-          slide: false,
-          time: 0,
-        },
-        {
-          note: 0,
-          pos: 8,
-          length: 3,
-          up: true,
-          down: false,
-          acc: true,
-          slide: false,
-          time: 0,
-        },
-        {
-          note: 5,
-          pos: 11,
-          length: 3,
-          up: true,
-          down: false,
-          acc: true,
-          slide: false,
-          time: 0,
-        },
-      ],
     };
   },
-  props: {},
+  props: {
+    backupFile: Object,
+    patternGroup: Number,
+    patternSection: Number,
+    pattern: Number,
+    playPos: {
+      type: Number,
+      default: -1
+    }
+  },
+  computed: {
+    canvas() {
+      return this.$refs["piano-roll-canvas"];
+    },
+    ctx() {
+      return this.canvas?.getContext("2d");
+    }
+  },
+  watch: {
+    backupFile() { this.updatePatternNotes(); this.render(); },
+    patternGroup() { this.updatePatternNotes(); this.render(); },
+    patternSection() { this.updatePatternNotes(); this.render(); },
+    pattern() { this.updatePatternNotes(); this.render(); }
+  },
   mounted() {
-    this.ctx = this.$refs["piano-roll-canvas"].getContext("2d");
+    this.updatePatternNotes();
+    //addEventListener("resize", () => console.log("resize"));
     setInterval(() => {
       this.render();
     }, 1000);
@@ -219,6 +192,37 @@ export default {
     }*/
   },
   methods: {
+    updatePatternNotes() {
+      this.notes = [];
+      const offset = groupOffset[this.patternGroup] | sectionOffset[this.patternSection] | patternOffset[this.pattern];
+      for(let i = 0; i < stepIndices.length; ++i) {
+        const address = offset + stepIndices[i];
+        let noteData = this.backupFile.data[address >>> 1];
+        if(address & 1) {
+          noteData = (noteData & 0xf0) >>> 4;
+        } else {
+          noteData = (noteData & 0x0f) >>> 0;
+        }
+        let attribData = this.backupFile.data[(address | 0x8) >>> 1];
+        if(address & 1) {
+          attribData = (attribData & 0xf0) >>> 4;
+        } else {
+          attribData = (attribData & 0x0f) >>> 0;
+        }
+        //const hexAddress = "0x" + (address >>> 0).toString(16).padStart(4, "0");
+        //console.log(`${i.toString().padStart(2)}: ${hexAddress}: ${noteLabels[noteData & 0x7]}:${attribData}`);
+        this.notes.push({
+          note: noteData,
+          pos: i,
+          length: 1,
+          up: (attribData & 0x02) !== 0,
+          down: (attribData & 0x01) !== 0,
+          acc: (attribData & 0x04) !== 0,
+          slide: (attribData & 0x08) !== 0,
+          time: 0,
+        });
+      }
+    },
     render() {
       if (!this.ctx) return;
       const ctx = this.ctx;
@@ -279,12 +283,12 @@ export default {
       });
       ctx.restore();
 
-      // Note test.
-      const selected = false;
+      // Notes.
       const cw = rowSize.width / 17;
       for (let i = 0; i < this.notes.length; ++i) {
+        const selected = (this.selection && (this.selection.x == (i + 1)));
         const note = this.notes[i];
-        const row = this.gridPitches.length - 1 - note.note;
+        const row = note.note !== 0xf ? (this.gridPitches.length - 1) - note.note : 18;
         ctx.save();
         ctx.translate(cw + note.pos * cw, row * rowSize.height);
         this.renderNote(
@@ -296,11 +300,31 @@ export default {
           selected ? this.gridStyles.selectedNote : this.gridStyles.note
         );
         ctx.restore();
+
+        // Attributes.
+        const attribs = [ "up", "down", "acc", "slide" ];
+        for(let j = 0; j < 4; ++j) {
+          ctx.save();
+          ctx.translate(cw + note.pos * cw, (14 + j) * rowSize.height);
+          if(note[attribs[j]]) {
+            this.renderNote(
+              ctx,
+              {
+                width: cw * note.length,
+                height: rowSize.height,
+              },
+              selected ? this.gridStyles.selectedNote : this.gridStyles.note
+            );
+          }
+          ctx.restore();
+        }
       }
 
       ctx.save();
       ctx.translate(cw, 0);
-      //this.renderPlayHead(ctx, 20, height, { stroke: "#ff0000" });
+      if(this.playPos >= 0) {
+        this.renderPlayHead(ctx, this.playPos, height, { stroke: "#ff0000" });
+      }
       ctx.restore();
     },
     renderRow(ctx, size, style, label) {
@@ -348,10 +372,29 @@ export default {
       ctx.stroke();
     },
     onMouseMove(evt) {
-      /* eslint-disable no-console */
-      console.log(this.ctx);
-      /* eslint-enable no-console */
-      this.$emit("mouse-move", evt);
+      const bounds = this.ctx.canvas.getBoundingClientRect();
+      const scaleH = this.ctx.canvas.width / bounds.width;
+      const scaleV = this.ctx.canvas.height / bounds.height;
+      const posX = Math.floor(evt.clientX - bounds.x) * scaleH;
+      const posY = Math.floor(evt.clientY - bounds.y) * scaleV;
+      const width = Math.floor(bounds.width * scaleH);
+      const height = Math.floor(bounds.height * scaleV);
+      if((posX >= 0) && (posX < width) && (posY >= 0) && (posY < height))
+      {
+        const cell = Math.floor((posX / width) * 17);
+        const row = Math.floor((posY / height) * 19);
+        /* eslint-disable no-console */
+        //console.log(this.ctx);
+        //console.log(evt);
+        this.selection = { x: cell, y: row };
+        console.log(`x: ${cell} y: ${row}`);
+        //this.$emit("mouse-move", evt);
+        /* eslint-enable no-console */
+      }
+      else
+      {
+        this.selection = null;
+      }
     },
     onMouseDown(evt) {
       this.$emit("mouse-down", evt);
