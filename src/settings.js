@@ -29,7 +29,11 @@ export class Settings {
             else {
                 // TODO: Transfer settings.
                 // TODO: Set version number so getSchema() works.
-                Object.assign(this, schema.create(settingsSchema, settingsSchema.latest));
+                const version = settings.versionMajor + "." + settings.versionMinor + "." + settings.versionPatch;
+                Object.assign(this, schema.create(settingsSchema, version));
+                for(const [key, value] of Object.entries(settings)) {
+                    this[key] = value;
+                }
             }
         } else {
             // TODO: Set version number so getSchema() works.

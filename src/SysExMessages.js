@@ -78,12 +78,10 @@ export class SysExMessage_Reset extends SysExMessageBase {
 
     /** Creates a SysEx message */
     static makeSysEx(resetReason) {
-        const headerPrefix  = SysExMessage_Reset.headerPrefix;
-        const sysExData = new Uint8Array(headerPrefix.length + 2);
-        sysExData.set(headerPrefix);
-        sysExData[headerPrefix.length] = ((resetReason & 0x7f) >>> 0);
-        sysExData[sysExData.length - 1] = (0xf7 >>> 0);
-        return sysExData;
+        const serializer = new BinarySerializer(SysExMessage_Reset.headerPrefix);
+        serializer.serialize(DataTypes.uint8, resetReason & 0x7f);
+        serializer.serialize(DataTypes.uint8, 0xf7);
+        return serializer.data;
     }
 
     /**
@@ -148,7 +146,7 @@ export class SysExMessage_BeginUpload extends SysExMessageBase {
     /** Creates a SysEx message */
     static makeSysEx(dataType, totalPackages, checksum) {
         const serializer = new BinarySerializer(SysExMessage_BeginUpload.headerPrefix);
-        serializer.serialize(DataTypes.uint8, dataType) & 0x7f;
+        serializer.serialize(DataTypes.uint8, dataType & 0x7f);
         const dataSerializer = new BinarySerializer();
         dataSerializer.serialize(DataTypes.uint32, totalPackages);
         dataSerializer.serialize(DataTypes.uint32, checksum);
@@ -256,18 +254,22 @@ export class SysExMessage_Upload extends SysExMessageBase {
     /** Returns the header prefix for the message. */
     static get headerPrefix() { return new Uint8Array([0xf0, 0x7d, 0x03, 0x03, 0x7e]); }
 
+    /** Returns the max data size for a packet of size packetSize  */
+    static calculateMaxDataSize(packetSize) {
+        return (packetSize - (SysExMessage_Upload.headerPrefix.length + 2)) >>> 1;
+    }
+
     /** Creates a SysEx message */
     static makeSysEx(dataType, packetIndex, data) {
-        const headerPrefix  = SysExMessage_Upload.headerPrefix;
-        const sysExData = new Uint8Array(headerPrefix.length + 4 + (data.length * 2));
-        sysExData.set(headerPrefix);
-        sysExData[headerPrefix.length] = ((dataType & 0x7f) >>> 0);
-        sysExData[headerPrefix.length + 1] = ((packetIndex & 0x7f) >>> 0);
-        sysExData.set(sysExUtil.nibbelize(data), headerPrefix.length + 2);
-        // TODO: Checksum.
-        sysExData[sysExData.length - 2] = (0 >>> 0);
-        sysExData[sysExData.length - 1] = (0xf7 >>> 0);
-        return sysExData;
+        const serializer = new BinarySerializer(SysExMessage_Upload.headerPrefix);
+        serializer.serialize(DataTypes.uint8, dataType & 0x7f);
+        serializer.serialize(DataTypes.uint8, packetIndex & 0x7f);
+        const dataSerializer = new BinarySerializer();
+        dataSerializer.push(data);
+        dataSerializer.serialize(DataTypes.uint8, sysExUtil.calculateDataChecksum(dataSerializer.data));
+        serializer.push(sysExUtil.nibbelize(dataSerializer.data));
+        serializer.serialize(DataTypes.uint8, 0xf7);
+        return serializer.data;
     }
 
     /**

@@ -278,7 +278,7 @@ export default {
       });
       ctx.translate(0, rowSize.height);
       this.renderRow(ctx, rowSize, this.gridStyles.lightRow, {
-        text: "Time",
+        text: "Rest",
         style: this.gridStyles.labelText,
       });
       ctx.restore();
@@ -286,9 +286,9 @@ export default {
       // Notes.
       const cw = rowSize.width / 17;
       for (let i = 0; i < this.notes.length; ++i) {
-        const selected = (this.selection && (this.selection.x == (i + 1)));
         const note = this.notes[i];
         const row = note.note !== 0xf ? (this.gridPitches.length - 1) - note.note : 18;
+        const selected = this.selection && (this.selection.x === (i + 1)) && (this.selection.y === row);
         ctx.save();
         ctx.translate(cw + note.pos * cw, row * rowSize.height);
         this.renderNote(
@@ -305,6 +305,8 @@ export default {
         const attribs = [ "up", "down", "acc", "slide" ];
         for(let j = 0; j < 4; ++j) {
           ctx.save();
+          const row = 14 + j;
+          const selected = this.selection && (this.selection.x === (i + 1)) && (this.selection.y === row);
           ctx.translate(cw + note.pos * cw, (14 + j) * rowSize.height);
           if(note[attribs[j]]) {
             this.renderNote(
@@ -386,8 +388,12 @@ export default {
         /* eslint-disable no-console */
         //console.log(this.ctx);
         //console.log(evt);
+        const reRender = (!this.selection) || (cell !== this.selection.x) || (row !== this.selection.y);
         this.selection = { x: cell, y: row };
-        console.log(`x: ${cell} y: ${row}`);
+        if(reRender) {
+          this.render();
+        }
+        //console.log(`x: ${cell} y: ${row}`);
         //this.$emit("mouse-move", evt);
         /* eslint-enable no-console */
       }

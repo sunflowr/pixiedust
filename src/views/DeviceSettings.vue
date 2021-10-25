@@ -6,7 +6,7 @@
           <v-card-title class="headline">
             Settings
             <v-spacer />
-            <v-btn>Send to device</v-btn>
+            <v-btn disabled @click="$emit('device:upload-settings')">Send to device</v-btn>
           </v-card-title>
           <v-card-subtitle></v-card-subtitle>
           <v-card-text>

@@ -91,16 +91,19 @@ export default {
   mounted() {
     this.$router.onError(this.showError);
     if (this.isElectronApp()) {
-      const { ipcRenderer } = require("electron");
-      if (ipcRenderer) {
+      if(window.ipc) {
+        const that = this;
         /* eslint-disable no-unused-vars */
-        ipcRenderer.on("navigate", (e, routePath) => {
-          if (this.$route.path !== routePath) {
-            this.$router.push(routePath);
+        window.ipc.on("navigate", (routePath) => {
+          if (that.$route.path !== routePath) {
+            that.$router.push(routePath);
           }
         });
         /* eslint-enable no-unused-vars */
       }
+      /*const { ipcRenderer } = require("electron");
+      if (ipcRenderer) {
+      }*/
     }
     this.$MIDI.$on("midi:initialized", this.midiInitialized);
     this.$MIDI.$on("midi:failed", this.midiFailed);

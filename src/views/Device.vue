@@ -25,8 +25,35 @@
         :syncing="sysExResponsePromises.length > 0"
         @device:sync="syncDeviceInfo"
         @device:request-backup="requestDeviceBackup"
-        @device:restore-backup="uploadDeviceBackup" />
+        @device:restore-backup="uploadDeviceBackup"
+        @device:upload-settings="uploadSettings" />
     </v-container>
+
+    <v-dialog v-model="uploadDialog" persistent max-width="640px">
+      <v-card>
+        <v-card-title class="headline">{{ uploadStatus }}</v-card-title>
+        <v-container>
+          <v-row>
+            <v-col>
+              <v-progress-linear :value="uploadProgress" height="10px" rounded striped indeterminate />
+            </v-col>
+          </v-row>
+          <v-row justify="space-between">
+            <v-col>
+              <div class="text-center">
+                <v-btn
+                  color="primary"
+                  :disabled="!!inputFile"
+                  medium
+                  @click="uploadDialog=false"
+                >Close</v-btn>
+              </div>
+            </v-col>
+          </v-row>
+        </v-container>
+      </v-card>
+    </v-dialog>
+
   </v-container>
 </template>
 
@@ -47,7 +74,7 @@ import { Version } from "@/version";
 import { Settings } from "@/settings";
 import { sysExUtil } from "@/plugins/sysexutil";
 import sysExHandler from "@/SysExHandler";
-import { checksumUtil } from "@/plugins/checksumutil";
+//import { checksumUtil } from "@/plugins/checksumutil";
 
 
 class SysExRequestJob {
@@ -113,7 +140,8 @@ export default {
       uploadState: null,
       syncing: false,
       sysExRequests: new PromiseQueue(),
-      sysExResponsePromises: []
+      sysExResponsePromises: [],
+      activeRequest: null
     };
   },
   computed: {
@@ -126,6 +154,18 @@ export default {
     midiOutDevice() {
       return this.$MIDI?.webMidi?.getOutputById(this.settings.midiOutputDevice) ?? null;
     },
+    deviceSettings() {
+      if (this.device) {
+        //return new Settings(this.device.settings);
+      }
+      return [];
+    },
+    // TODO: Fix upload status.
+    uploadDialog() { return (this.sysExResponsePromises.length > 0) || (!this.sysExRequests.isEmpty) || (this.sysExRequests.isWorking); },
+    inputFile() { return null; },
+    uploadProgress() { return 0; },
+    uploadStatus() { return "Syncing..."; },
+    // END TODO
     activeBackupFile: {
       get() {
         if(this.$route.name === 'device-backup' && this.$route.params?.id) {
@@ -333,6 +373,18 @@ export default {
 
       this.processResponse({dataType: dataType});
     },
+    upload(sysExData) {
+      if ((this.$MIDI?.webMidi ?? false) == false) {
+        throw new Error("No WebMIDI.");
+      }
+      return this.sysExRequests.queue(() => new Promise((resolve, reject) => {
+        this.receiveStatus = "";
+        for(let i = 0; i < sysExData.length; ++i) {
+          this.$MIDI.sendSysExAsync(this.midiOutDevice, sysExData[i], () => {}).catch(reject);
+        }
+        resolve();
+      }));
+    },
     sync(sysExData, timeOutMs, evalCompleted) {
       if ((this.$MIDI?.webMidi ?? false) == false) {
         throw new Error("No WebMIDI.");
@@ -386,8 +438,6 @@ export default {
         this.receiveStatus = "No RE-CPU detected, plesae check MIDI device settings and connection.";
       });
     },
-    requestMemory() {
-    },
     requestDeviceBackup() {
       if (!this.device) {
         return;
@@ -434,14 +484,25 @@ export default {
         this.pinger = null;
       }
     },
+    uploadSettings() {
+      if(this.deviceSettings) {
+        //console.log(this.deviceSettings);
+        //const syxExData = sysExUtil.convertToSysEx(sysExUploadDataTypes.settings, true, 512, this.deviceSettings, false);
+        //console.log(syxExData);
+      }
+    },
     uploadDeviceBackup(fileIndex = undefined) {
       if(!fileIndex) {
         fileIndex = this.activeBackupFile;
       }
-      const syxExData = sysExUtil.convertToSysEx(sysExUploadDataTypes.memoryDump, true, 512, this.backupFiles[fileIndex].data, false);
-      /* eslint-disable no-console */
-      console.log(syxExData);
-      /* eslint-enable no-console */
+      const syxExData = sysExUtil.convertToSysEx(sysExUploadDataTypes.memoryDump, false, 512, this.backupFiles[fileIndex].data, false);
+      this.upload(syxExData)
+      .catch(err => {
+        this.clearSync();
+        this.receiveStatus = err.message;
+        this.receiveStatus = "No RE-CPU detected, plesae check MIDI device settings and connection.";
+      });
+
     },
     exportBackupFile(fileIndex) {
       const file =this.backupFiles[fileIndex];
@@ -449,7 +510,7 @@ export default {
 
       const exportData = [];
       if(exportSysEx) {
-        console.log(SysExMessage_BeginUpload.makeSysEx(sysExUploadDataTypes.memoryDump, 7, checksumUtil.calculateCRC(file.data)));
+        //console.log(SysExMessage_BeginUpload.makeSysEx(sysExUploadDataTypes.memoryDump, 7, checksumUtil.calculateCRC(file.data)));
         const syxExTracks = sysExUtil.convertToSysEx(sysExUploadDataTypes.memoryDump, true, 512, file.data, false);
         let data = new Uint8Array();
         for(let i = 0; i < syxExTracks.length; ++i) {
@@ -463,8 +524,6 @@ export default {
       } else {
         exportData.push(new Uint8Array(file.data));
       }
-
-      console.log(exportData);
 
       // TODO: Better sanitization of filenames when exporting.
       const filename = file.name.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + (exportSysEx ? ".syx" : ".bin");

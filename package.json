@@ -1,6 +1,6 @@
 {
   "name": "pixiedust",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Tool for communicating with the RE-CPU",
   "author": "Pixie Johan Anderson",
@@ -64,6 +64,9 @@
     "rules": {},
     "parserOptions": {
       "parser": "babel-eslint"
+    },
+    "globals": {
+      "__static": "readonly"
     }
   },
   "postcss": {

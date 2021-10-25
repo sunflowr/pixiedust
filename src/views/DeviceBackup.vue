@@ -82,7 +82,7 @@
             ></v-text-field>
           </v-card-title>
           <v-card-text style="font-family: monospace" v-if="!!hexData">
-            <v-btn @click="$emit('device:restore-backup', currentBackup)">Upload</v-btn>
+            <v-btn :disabled="!device" @click="$emit('device:restore-backup', currentBackup)">Upload</v-btn>
           </v-card-text>
         </v-card>
       </v-col>

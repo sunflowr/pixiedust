@@ -2,6 +2,7 @@
 
 import { app, protocol, BrowserWindow, Menu } from 'electron'
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
+import * as path from 'path';
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
 // Keep a global reference of the window object, if you don't, the window will
@@ -25,17 +26,17 @@ function setMainMenu() {
                     }
                 },
                 {
+                    label: "Device",
+                    accelerator: "CmdOrCtrl+D",
+                    click() {
+                        win.webContents.send("navigate", "/device");
+                    }
+                },
+                {
                     label: "Send to device",
                     accelerator: "CmdOrCtrl+U",
                     click() {
                         win.webContents.send("navigate", "/midiupload");
-                    }
-                },
-                {
-                    label: "SysEx tool",
-                    accelerator: "CmdOrCtrl+S",
-                    click() {
-                        win.webContents.send("navigate", "/sysextool");
                     }
                 },
                 { type: 'separator' },
@@ -98,11 +99,14 @@ function setMainMenu() {
 function createWindow() {
     // Create the browser window.
     win = new BrowserWindow({
-        width: 800,
-        height: 600,
+        width: 1000,
+        height: 800,
         title: app.getName(),
         webPreferences: {
-            nodeIntegration: true
+            enableRemoteModule: true,
+            nodeIntegration: true,
+            contextIsolation: true,
+            preload: path.resolve(__static, 'preload.js'),
         }
     })
 

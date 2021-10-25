@@ -11,7 +11,7 @@
           </v-btn>
         </template>
         <v-list dense>
-          <v-list-item @click="$emit('sync-memory')">
+          <v-list-item :disabled="!deviceAvailable" @click="$emit('sync-memory')">
             <v-list-item-icon>
               <v-icon>mdi-refresh</v-icon>
             </v-list-item-icon>
@@ -46,7 +46,7 @@
                 </v-btn>
               </template>
               <v-list dense>
-                <v-list-item @click="$emit('file:upload', i, file)">
+                <v-list-item :disabled="!deviceAvailable" @click="$emit('file:upload', i, file)">
                   <v-list-item-icon>
                     <v-icon>mdi-file-export</v-icon>
                   </v-list-item-icon>
@@ -98,7 +98,8 @@ export default {
     files: Array,
     activeFile: Number,
     loading: Boolean,
-    disabled: Boolean
+    disabled: Boolean,
+    deviceAvailable: Boolean
   },
   methods: {
     openImportFileDialog() {

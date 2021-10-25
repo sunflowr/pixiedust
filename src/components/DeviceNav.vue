@@ -20,6 +20,7 @@
       label="Backups"
       :loading="loading"
       :disabled="loading"
+      :deviceAvailable="!!device"
       :files="backupFiles"
       :activeFile="activeBackupFile"
       @sync-memory="$emit('device:request-backup')"
