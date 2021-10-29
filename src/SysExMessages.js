@@ -256,7 +256,7 @@ export class SysExMessage_Upload extends SysExMessageBase {
 
     /** Returns the max data size for a packet of size packetSize  */
     static calculateMaxDataSize(packetSize) {
-        return (packetSize - (SysExMessage_Upload.headerPrefix.length + 2)) >>> 1;
+        return (packetSize - (SysExMessage_Upload.headerPrefix.length + 4)) >>> 1;
     }
 
     /** Creates a SysEx message */

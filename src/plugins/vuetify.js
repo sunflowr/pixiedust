@@ -14,6 +14,8 @@ export default new Vuetify({
             light: {
                 columnDark: '#dfdfdf',
                 columnLight: '#dbdbdb',
+                inactiveColumnDark: '#cfcfcf',
+                inactiveColumnLight: '#cbcbcb',
                 cellSeparator: '#d0d0d0',
                 octaveSeparator: '#3E3E3E',
                 noteColor: '#19B5E6',
@@ -22,6 +24,8 @@ export default new Vuetify({
             dark: {
                 columnDark: '#202020',
                 columnLight: '#242424',
+                inactiveColumnDark: '#101010',
+                inactiveColumnLight: '#141414',
                 cellSeparator: '#2F2F2F',
                 octaveSeparator: '#3E3E3E',
                 noteColor: '#E64A19',

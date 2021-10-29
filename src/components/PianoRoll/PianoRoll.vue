@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <v-container dense class="elevation-5">
     <!--<VuePerfectScrollbar
       class="scroll-area"
       v-once
@@ -7,24 +7,31 @@
       @ps-scroll-x="scrollX"
       @ps-scroll-y="scrollY"
     >-->
-    <canvas
-      ref="piano-roll-canvas"
-      width="640"
-      height="340"
-      @mousemove="onMouseMove"
-      @mousedown="onMouseDown"
-      @mouseup="onMouseUp"
-    ></canvas>
+    <!--<div style="position: relative; width: 100%; height: 300pt">-->
+      <canvas
+        ref="piano-roll-canvas"
+        class="piano-roll-canvas"
+        @mousemove="onMouseMove"
+        @mousedown="onMouseDown"
+        @mouseup="onMouseUp"
+      ></canvas>
+    <!--</div>-->
     <!--</VuePerfectScrollbar>-->
   </v-container>
 </template>
 
-<style lang="scss">
+<style scoped lang="scss">
 .scroll-area {
   position: relative;
   margin: auto;
   width: 400px;
   height: 300px;
+}
+
+.piano-roll-canvas {
+  display: block;
+  width: 100%;
+  height: 320pt;
 }
 </style>
 
@@ -52,6 +59,133 @@ const stepIndices = [
 const noteLabels = [ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C'" ];
 /* eslint-enable no-unused-vars */
 
+class PianoRollRenderer
+{
+  static pitches = [ "C'", "B", "A#", "A", "G#", "G", "F#", "F", "E", "D#", "D", "C#", "C" ];
+
+  constructor(ctx, styles) {
+    this.ctx = ctx;
+    this.styles = styles;
+    this.viewport = { x: 0, y: 0, width: 0, height: 0 }; 
+    this.cellWidth = 30;
+    this.cellHeight = 18;
+    this._pattern = { notes: [] };
+  }
+
+  get pattern() {
+    return this._pattern;
+  }
+
+  set pattern(value) {
+    this._pattern = value;
+  }
+
+  resize() {
+  }
+
+  draw() {
+    this.ctx.beginPath();
+    this.ctx.rect(0, 0, this.viewport.width, this.viewport.height);
+    this.ctx.clip();
+  }
+
+  getRow(y) {
+    return Math.round(y / this.cellHeight);
+
+  }
+
+  getKeyFromRow(row) {
+    return PianoRollRenderer.pitches[row % PianoRollRenderer.pitches.length];
+  }
+
+  isKeySharp(key) {
+    return key.includes("#")
+  }
+
+  drawContainer(rect, style, elevation) {
+      this.ctx.save();
+      this.ctx.translate(rect.x, rect.y);
+      this.ctx.beginPath();
+      if(elevation) {
+        this.ctx.shadowColor = "#000000";
+        this.ctx.shadowBlur = elevation;
+      }
+      if(style.stroke) {
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeStyle = style.stroke;
+      }
+      this.ctx.fillStyle = style.fill;
+      this.ctx.rect(0, 0, rect.width, rect.height);
+      this.ctx.fill();
+      if(style.stroke) {
+        this.ctx.stroke();
+      }
+      this.ctx.restore();
+  }
+
+  drawBackground(rect, scrollY) {
+    this.ctx.save();
+    this.ctx.translate(0, scrollY);
+    const patternWidth = Math.min(this.pattern.notes.length * this.cellWidth, rect.width);
+    const inactiveWidth = rect.width - patternWidth;
+    // TODO: Handle scroll-offset.
+    for(let y = 0; y < rect.height; y += this.cellHeight) {
+      const row = this.getRow(scrollY + y);
+      const key = this.getKeyFromRow(row);
+      const isSharpKey = this.isKeySharp(key);
+      const style = isSharpKey ? this.styles.darkRow : this.styles.lightRow;
+
+      this.ctx.beginPath();
+      this.ctx.fillStyle = style.fill;
+      this.ctx.rect(0, y, patternWidth, this.cellHeight);
+      this.ctx.fill();
+
+      if(inactiveWidth > 0) {
+        const style = isSharpKey ? this.styles.inactiveDarkRow : this.styles.ianctiveLightRow;
+
+        this.ctx.beginPath();
+        this.ctx.fillStyle = style.fill;
+        this.ctx.rect(patternWidth, y, inactiveWidth, this.cellHeight);
+        this.ctx.fill();
+      }
+    }
+    this.ctx.restore();
+  }
+
+  /*renderColumnSeparator(ctx, offsetX, width, height, columnWidth) {
+    ctx.save();
+    ctx.translate(offsetX, 0);
+    let i = 0;
+    for(let x = 0; x < width; x += columnWidth) {
+      ctx.beginPath();
+      ctx.lineWidth = (i % 4) === 0 ? 2 : 1;
+      ctx.strokeStyle = this.gridStyles.lightRow.stroke;
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, height);
+      ctx.stroke();
+      ctx.translate(columnWidth, 0);
+      i++;
+    }
+    ctx.restore();
+  }
+
+  drawMeasures(offsetX) {
+    this.ctx.save();
+    for(let x = 0; x < this.width; x += columnWidth) {
+      this.ctx.beginPath();
+      this.ctx.lineWidth = (i % 4) === 0 ? 2 : 1;
+      this.ctx.strokeStyle = this.gridStyles.lightRow.stroke;
+      this.ctx.moveTo(0, 0);
+      this.ctx.lineTo(0, height);
+      this.ctx.stroke();
+      this.ctx.translate(columnWidth, 0);
+      i++;
+    }
+    this.ctx.restore();
+  }*/
+
+}
+
 export default {
   name: "PianoRoll",
   components: {
@@ -59,6 +193,10 @@ export default {
   },
   data() {
     return {
+      canvasWidth: 600,
+      canvasHeight: 300,
+      renderer: null,
+      keys: noteLabels,
       selection: null,
       settings: {
         maxScrollbarLength: 60,
@@ -102,6 +240,14 @@ export default {
           fill: this.$vuetify.theme.currentTheme.columnLight,
           stroke: this.$vuetify.theme.currentTheme.cellSeparator,
         },
+        inactiveDarkRow: {
+          fill: this.$vuetify.theme.currentTheme.inactiveColumnDark,
+          stroke: this.$vuetify.theme.currentTheme.cellSeparator,
+        },
+        ianctiveLightRow: {
+          fill: this.$vuetify.theme.currentTheme.inactiveColumnLight,
+          stroke: this.$vuetify.theme.currentTheme.cellSeparator,
+        },
         note: {
           fill: this.$vuetify.theme.currentTheme.noteColor,
           stroke: this.$vuetify.theme.currentTheme.cellSeparator,
@@ -128,21 +274,38 @@ export default {
       return this.$refs["piano-roll-canvas"];
     },
     ctx() {
-      return this.canvas?.getContext("2d");
+      return this.canvas?.getContext("2d", { alpha: false });
+    },
+    pianoRollCanvasStyle() {
+      return "display: block;"
+            + "width: " +  this.canvasWidth + "pt;"
+            + "height: " + this.canvasHeight + "pt";
     }
   },
   watch: {
-    backupFile() { this.updatePatternNotes(); this.render(); },
-    patternGroup() { this.updatePatternNotes(); this.render(); },
-    patternSection() { this.updatePatternNotes(); this.render(); },
-    pattern() { this.updatePatternNotes(); this.render(); }
+    backupFile() { this.updatePatternNotes(); this.render(true); },
+    patternGroup() { this.updatePatternNotes(); this.render(true); },
+    patternSection() { this.updatePatternNotes(); this.render(true); },
+    pattern() { this.updatePatternNotes(); this.render(true); }
   },
+  /*updated() {
+    console.log("updated");
+    const that = this;
+    this.$nextTick(() => {
+      that.ctx.canvas.width  = this.ctx.canvas.offsetWidth;
+      that.ctx.canvas.height = this.ctx.canvas.offsetHeight;
+      that.updatePatternNotes();
+      that.render();
+    });
+  },*/
   mounted() {
+    this.renderer = new PianoRollRenderer(this.canvas?.getContext("2d"), this.gridStyles);
+    window.addEventListener('resize', this.handleResize);
     this.updatePatternNotes();
-    //addEventListener("resize", () => console.log("resize"));
-    setInterval(() => {
+    this.handleResize();
+    /*setInterval(() => {
       this.render();
-    }, 1000);
+    }, 1000);*/
 
     /*
     https://v3.vuejs.org/guide/migration/introduction.html#breaking-changes
@@ -191,9 +354,19 @@ export default {
       }
     }*/
   },
+  beforeDestroy() {
+    window.removeEventListener('resize', this.handleResize);
+  },
   methods: {
+    handleResize() {
+      //that.$nextTick(() => that.render());
+      requestAnimationFrame(this.render);
+    },
     updatePatternNotes() {
-      this.notes = [];
+      this.currentPattern = {
+        notes: []
+      };
+
       const offset = groupOffset[this.patternGroup] | sectionOffset[this.patternSection] | patternOffset[this.pattern];
       for(let i = 0; i < stepIndices.length; ++i) {
         const address = offset + stepIndices[i];
@@ -209,29 +382,194 @@ export default {
         } else {
           attribData = (attribData & 0x0f) >>> 0;
         }
-        //const hexAddress = "0x" + (address >>> 0).toString(16).padStart(4, "0");
-        //console.log(`${i.toString().padStart(2)}: ${hexAddress}: ${noteLabels[noteData & 0x7]}:${attribData}`);
-        this.notes.push({
+        if(noteData === 0xE)
+        {
+          break;
+        }
+        this.currentPattern.notes.push({
           note: noteData,
-          pos: i,
-          length: 1,
           up: (attribData & 0x02) !== 0,
           down: (attribData & 0x01) !== 0,
           acc: (attribData & 0x04) !== 0,
           slide: (attribData & 0x08) !== 0,
-          time: 0,
+          rest: noteData === 0xf
         });
+        //const hexAddress = "0x" + (address >>> 0).toString(16).padStart(4, "0");
+        //console.log(`${i.toString().padStart(2)}: ${hexAddress}: ${noteLabels[noteData & 0x7]}:${attribData}`);
       }
+
+      this.renderer.pattern = this.currentPattern;
     },
-    render() {
+    render(force) {
       if (!this.ctx) return;
       const ctx = this.ctx;
-      const w = ctx.canvas.clientWidth;
-      const h = ctx.canvas.clientHeight;
+
+      // Re-size if needed.
+      this.canvasWidth = this.canvas.clientWidth;
+      this.canvasHeight = this.canvas.clientHeight;
+      if(!force) {
+        if((this.canvas.width == this.canvasWidth) && (this.canvas.height === this.canvasHeight)) {
+          requestAnimationFrame(this.render);
+          return;
+        }
+      }
+      this.canvas.width = this.canvasWidth;
+      this.canvas.height = this.canvasHeight;
+
+      const w = this.canvasWidth;
+      const h = this.canvasHeight;
 
       ctx.beginPath();
+      ctx.rect(0, 0, w, h);
+      ctx.clip();
+
+      const scrollY = 0;
+      const x = 0;
+      const y = 0;
+      const cellWidth = 50;
+      const cellHeight = h / 18;
+      this.renderer.cellWidth = cellWidth;
+      this.renderer.cellHeight = cellHeight;
+      this.cellWidth = cellWidth;
+      this.cellHeight = cellHeight;
+
+      let height = 0;
+
+      height = cellHeight * 13;
+      ctx.save();
+      ctx.translate(50, 0);
+      this.renderer.drawBackground({ x: x, y: y, width: w, height: height}, scrollY);
+      this.renderColumnSeparator(ctx, x, w, height, cellWidth);
+      this.renderNotes(x, y, w, height, cellWidth, cellHeight, this.gridStyles.note);
+      ctx.restore();
+      this.renderKeys(y, 50);
+
+      ctx.save();
+      height = cellHeight * 4;
+      ctx.translate(cellWidth, 14 * cellHeight);
+      this.renderer.drawBackground({ x: x, y: y, width: w, height: height}, 0);//, w, height, cellHeight, { odd: this.gridStyles.lightRow, even: this.gridStyles.darkRow});
+      ctx.translate(-cellWidth, 0);
+      ctx.save();
+
+      ctx.save();
+      ctx.translate(50, 0);
+      this.renderColumnSeparator(ctx, x, w, height, cellWidth);
+      this.renderAttibutes(x, y, w, h, cellWidth, cellHeight, this.gridStyles.note);
+      ctx.restore();
+      ctx.restore();
+
+      this.renderer.drawContainer({ x: 0, y: 0, width: cellWidth, height: this.renderer.cellHeight * 4},
+      { fill: "#000000", stroke: this.$vuetify.theme.currentTheme.cellSeparator }, 8);
+      for(let lbl of [ "Up", "Down", "Accent", "Slide" ]) {
+        this.renderKey(0, 0, 50, cellHeight, this.gridStyles.labelText, { text: lbl, style: this.gridStyles.labelText });
+        ctx.translate(0, cellHeight);
+      }
+      ctx.restore();
+
+      /*ctx.beginPath();
       ctx.clearRect(0, 0, w, h);
-      this.renderGrid(ctx, w, h);
+      this.renderGrid(ctx, w, h);*/
+      requestAnimationFrame(this.render);
+    },
+    renderColumnSeparator(ctx, offsetX, width, height, columnWidth) {
+      ctx.save();
+      ctx.translate(offsetX, 0);
+      let i = 0;
+      for(let x = 0; x < width; x += columnWidth) {
+        ctx.beginPath();
+        ctx.lineWidth = (i % 4) === 0 ? 2 : 1;
+        ctx.strokeStyle = this.gridStyles.lightRow.stroke;
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, height);
+        ctx.stroke();
+        ctx.translate(columnWidth, 0);
+        i++;
+      }
+      ctx.restore();
+    },
+    renderKeys(scrollY, width) {
+      const pitches = [ "C'", "B", "A#", "A", "G#", "G", "F#", "F", "E", "D#", "D", "C#", "C" ];
+
+      this.renderer.drawContainer({ x: 0, y: 0, width: width, height: this.renderer.cellHeight * pitches.length},
+      { fill: "#000000", stroke: this.$vuetify.theme.currentTheme.cellSeparator }, 8);
+
+      this.ctx.save();
+      for(let pitch of pitches) {
+        const sharpPitch = pitch.includes("#");
+        this.renderKey(0, 0, width,
+          this.cellHeight, sharpPitch ? this.gridStyles.pitchSharpText : this.gridStyles.pitchText,
+          { text: pitch, style: sharpPitch ? this.gridStyles.pitchSharpText : this.gridStyles.pitchText });
+        this.ctx.translate(0, this.cellHeight);
+      }
+      this.ctx.restore();
+    },
+    renderNotes(offsetX, offsetY, width, height, columnWidth, columnHeight, style) {
+      this.ctx.save();
+      this.ctx.translate(offsetX, offsetY);
+      const noteOffsetY = [ 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
+      for(let i = 0; i < this.currentPattern.notes.length; ++i) {
+        const note = this.currentPattern.notes[i];
+        if(note.note !== 0xf) {
+          this.renderNote2(i * columnWidth, noteOffsetY[note.note] * columnHeight, columnWidth, columnHeight, style);
+        }
+      }
+      this.ctx.restore();
+    },
+    renderAttibutes(offsetX, offsetY, width, height, columnWidth, columnHeight, style) {
+      const attribs = [ "up", "down", "acc", "slide" ];
+
+      /*this.ctx.save();
+      this.ctx.translate(offsetX, offsetY);
+      this.ctx.beginPath();
+      this.ctx.lineWidth = 2;
+      this.ctx.shadowColor = "#000000";
+      this.ctx.shadowBlur = 8;
+      this.ctx.fillStyle = "#000000";
+      this.ctx.strokeStyle = this.$vuetify.theme.currentTheme.cellSeparator;
+      this.ctx.rect(0, 0, width, this.cellHeight * attribs.length);
+      this.ctx.fill();
+      this.ctx.stroke();
+      this.ctx.restore();*/
+
+      this.ctx.save();
+      this.ctx.translate(offsetX, offsetY);
+      for(let i = 0; i < this.currentPattern.notes.length; ++i) {
+        const note = this.currentPattern.notes[i];
+        if(note.note !== 0xf) {
+          for(let j = 0; j < attribs.length; ++j) {
+            if(note[attribs[j]]) {
+              this.ctx.save();
+              this.ctx.translate(0, j * columnHeight);
+              this.renderNote2(0, 0, columnWidth, columnHeight, style);
+              this.ctx.restore();
+            }
+          }
+        }
+        this.ctx.translate(columnWidth, 0);
+      }
+      this.ctx.restore();
+    },
+    renderKey(x, y, width, height, style, label) {
+      this.renderNote2(x, y, width, height, style, label);
+    },
+    renderNote2(x, y, width, height, style, label) {
+      this.ctx.save()
+      this.ctx.translate(x, y);
+      this.ctx.beginPath();
+      this.ctx.lineWidth = 2;
+      this.ctx.fillStyle = style.fill;
+      this.ctx.strokeStyle = style.stroke;
+      this.ctx.rect(0, 0, width, height);
+      this.ctx.fill();
+      this.ctx.stroke();
+      if (label && label.text) {
+        this.ctx.font = "12px sans-serif";
+        this.ctx.fillStyle = label.style.textFill;
+        this.ctx.textAlign = "center";
+        this.ctx.textBaseline = "middle";
+        this.ctx.fillText(label.text, width / 2, height / 2);
+      }
+      this.ctx.restore();
     },
     renderGrid(ctx, width, height) {
       const rowSize = {
@@ -285,9 +623,13 @@ export default {
 
       // Notes.
       const cw = rowSize.width / 17;
-      for (let i = 0; i < this.notes.length; ++i) {
-        const note = this.notes[i];
-        const row = note.note !== 0xf ? (this.gridPitches.length - 1) - note.note : 18;
+      for (let i = 0; i < this.currentPattern.notes.length; ++i) {
+        const note = this.currentPattern.notes[i];
+        const row = note.note !== 0xf
+          ? note.note !== 0xe
+            ? (this.gridPitches.length - 1) - note.note
+            : 17.5
+          : 18;
         const selected = this.selection && (this.selection.x === (i + 1)) && (this.selection.y === row);
         ctx.save();
         ctx.translate(cw + note.pos * cw, row * rowSize.height);
@@ -359,11 +701,9 @@ export default {
       ctx.fill();
       ctx.stroke();
     },
-    /* eslint-disable no-unused-vars */
     renderNote(ctx, size, style) {
       this.renderCell(ctx, size, style);
     },
-    /* eslint-enable no-unused-vars */
     renderPlayHead(ctx, x, height, style) {
       ctx.beginPath();
       ctx.lineWidth = 2;
@@ -385,39 +725,37 @@ export default {
       {
         const cell = Math.floor((posX / width) * 17);
         const row = Math.floor((posY / height) * 19);
-        /* eslint-disable no-console */
-        //console.log(this.ctx);
-        //console.log(evt);
         const reRender = (!this.selection) || (cell !== this.selection.x) || (row !== this.selection.y);
         this.selection = { x: cell, y: row };
         if(reRender) {
-          this.render();
+          //this.render();
         }
         //console.log(`x: ${cell} y: ${row}`);
         //this.$emit("mouse-move", evt);
-        /* eslint-enable no-console */
       }
       else
       {
         this.selection = null;
       }
     },
+    /* eslint-disable no-unused-vars */
+    /* eslint-disable no-console */
     onMouseDown(evt) {
-      this.$emit("mouse-down", evt);
+      //this.$emit("mouse-down", evt);
     },
     onMouseUp(evt) {
-      this.$emit("mouse-up", evt);
+      //this.$emit("mouse-up", evt);
     },
     scrollX(evt) {
       /* eslint-disable no-console */
-      console.log(evt);
+      //console.log(evt);
       /* eslint-enable no-console */
     },
     scrollY(evt) {
-      /* eslint-disable no-console */
-      console.log(evt);
-      /* eslint-enable no-console */
+      //console.log(evt);
     },
+    /* eslint-enable no-console */
+    /* eslint-enable no-unused-vars */
   },
 };
 </script>
