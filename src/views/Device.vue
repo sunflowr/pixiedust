@@ -418,6 +418,7 @@ export default {
     syncDeviceInfo() {
       this.$store.dispatch("clearDevice");
       this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.bootloader]), 5000, data => data.dataType === sysExUploadDataTypes.bootloader)
+      // TODO: Catch and try old version message.
       .then(() => this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.application]), 5000, data => data.dataType === sysExUploadDataTypes.application))
       .then(() => this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.settings]), 5000, data => data.dataType === sysExUploadDataTypes.settings))
       //.then( PING ) SysExMessage_Ping.makeSysEx(0x1f).slice(2, -1),

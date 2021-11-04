@@ -23,7 +23,7 @@
         </v-card>
       </v-col>
     </v-row>
-    <v-row v-if="!!currentBackup">
+    <v-row v-if="(!!currentBackup) && currentBackup.data.length === (512 * 3)">
       <v-col>
         <v-card>
           <v-card-title>
