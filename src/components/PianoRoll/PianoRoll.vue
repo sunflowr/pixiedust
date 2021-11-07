@@ -59,20 +59,45 @@ const stepIndices = [
 const noteLabels = [ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C'" ];
 /* eslint-enable no-unused-vars */
 
-/*class Rect
+class Rect
 {
   constructor(x, y, width, height) {
-    this._x = x;
-    this._y = y;
-    this._width = width;
-    this._height = height;
+    if(x instanceof Rect) {
+      this.x = x.x;
+      this.y = x.y;
+      this.width = x.width;
+      this.height = x.height;
+    } else if(x instanceof Object) {
+      this.x = x.x;
+      this.y = x.y;
+      this.width = x.width;
+      this.height = x.height;
+    } else if((!isNaN(x)) &&
+              (!isNaN(y)) &&
+              (!isNaN(width)) &&
+              (!isNaN(height))) {
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.height = height;
+    } else {
+      throw new TypeError("Arugment is of wrong type");
+    }
   }
 
-  get x() { return this._x; }
-  get y() { return this._x; }
-  get width() { return this._width; }
-  get height() { return this._height; }
-}*/
+  get top() { return this.y; }
+  get bottom() { return this.y + this.height; }
+  get left() { return this.x; }
+  get right() { return this.x + this.width; }
+
+  inside(x, y) {
+    if(x instanceof Object) {
+      y = x.y;
+      x = x.x;
+    }
+    return (x >= this.left) && (x <= this.right) && (y >= this.top) && (y <= this.bottom);
+  }
+}
 
 /*class Panel
 {
@@ -111,20 +136,31 @@ class PianoRollRenderer
     this._cursorPos = { x: -100, y: -100 };
     this._pattern = { notes: [] };
     this.styles.colors = {};
-    this.styles.colors.grdH = this.ctx.createLinearGradient(0, 0, 20, 0);
-    this.styles.colors.grdH.addColorStop(0, "rgba(0,0,0,0.3)");
-    this.styles.colors.grdH.addColorStop(1, "rgba(0,0,0,0.0)");
-    this.styles.colors.grdV = this.ctx.createLinearGradient(0, 0, 0, 20);
-    this.styles.colors.grdV.addColorStop(0, "rgba(0,0,0,0.3)");
-    this.styles.colors.grdV.addColorStop(1, "rgba(0,0,0,0.0)");
+    this.styles.colors.shadowH = this.ctx.createLinearGradient(0, 0, 20, 0);
+    this.styles.colors.shadowH.addColorStop(0, "rgba(0,0,0,0.3)");
+    this.styles.colors.shadowH.addColorStop(1, "rgba(0,0,0,0.0)");
+    this.styles.colors.shadowV = this.ctx.createLinearGradient(0, 0, 0, 20);
+    this.styles.colors.shadowV.addColorStop(0, "rgba(0,0,0,0.3)");
+    this.styles.colors.shadowV.addColorStop(1, "rgba(0,0,0,0.0)");
+
+    this._drawRectStack = [];
+    this._activeId = -1;
+    this._hoverId = -1;
+    this._currentId = -1;
+
+    this.vSplitterId = 10000;
+
+    this._updatePass = -1;
+    this._redraw = true;
+    this._mouseCursor = "default";
   }
 
   get isUpdatePass() {
-    return this.updatePass && this.updatePass === 0;
+    return this._updatePass === 0;
   }
 
-get isDrawPass() {
-    return this.updatePass && this.updatePass === 1;
+  get isDrawPass() {
+    return this._updatePass === 1;
   }
 
   get pattern() {
@@ -147,37 +183,49 @@ get isDrawPass() {
     return (PianoRollRenderer.pitches.length * this.cellHeight) + (this.splitterMargin * 2) + (4 * this.cellHeight);
   }
 
-  resize() {
+  get mouseCursor() {
+    return this._mouseCursor;
+  }
+
+  resize(width, height) {
+    this.viewport.width = width;
+    this.viewport.height = height;
+    this._redraw = true;
   }
 
   draw(width, height) {
     this.viewport.width = width;
     this.viewport.height = height;
-    this.ctx.beginPath();
-    this.ctx.rect(0, 0, this.viewport.width, this.viewport.height);
-    this.ctx.clip();
-    /*this.ctx.save();
-    this.ctx.beginPath();
-    this.ctx.fillStyle = "white";
-    this.ctx.rect(0, 0, this.viewport.width, this.viewport.height);
-    this.ctx.fill();
-    this.ctx.restore();*/
 
-    /* eslint-disable no-unused-vars */
     const scrollX = 0;
     const scrollY = 0;
     const hSplit = this.keyWidth;
     const vSplit = this.viewport.height - (this.cellHeight * 4);
-    /* eslint-enable no-unused-vars */
 
+    let prevMaxId = -1;
+    let prevActiveId = this._activeId;
+    this._activeId = -1;
+    this._mouseCursor = "default";
     for(let p = 0; p < 2; ++p) {
-      this.updatePass = p;
-      this.horizontalSplit({ x: 0, y: 0, width: this.viewport.width, height: this.viewport.height },
+      this._currentId = 0;
+      this._updatePass = p;
+
+      if(this.isDrawPass && (!this._redraw)) {
+        return;
+      }
+
+      if(this.isDrawPass) {
+        console.log("draw");
+        this.ctx.beginPath();
+        this.ctx.rect(0, 0, this.viewport.width, this.viewport.height);
+        this.ctx.clip();
+      }
+
+      this.horizontalSplit(this._getId(), new Rect(0, 0, this.viewport.width, this.viewport.height),
         vSplit,
         {},
         rect => {
-          const innerRect = {...rect, height: Math.min(rect.height, this.cellHeight * 13)}
-          this.verticalSplit(innerRect,
+          this.verticalSplit(this.vSplitterId, new Rect({...rect, height: Math.min(rect.height, this.cellHeight * 13)}),
           hSplit,
           this.styles.lightRow,
           rect => this.drawKeys(rect, scrollY),
@@ -186,19 +234,19 @@ get isDrawPass() {
             this.drawMeasures(rect, scrollX);
             this.drawNotes(rect, scrollX, scrollY);
             // Add a small shadow for depth.
-            this._drawRect({...rect, width: 20}, { fill: this.styles.colors.grdH });
-            this._drawRect({...rect, height: 20}, { fill: this.styles.colors.grdV });
+            this._drawRect(new Rect({...rect, width: 20}), { fill: this.styles.colors.shadowH });
+            this._drawRect(new Rect({...rect, height: 20}), { fill: this.styles.colors.shadowV });
           });
         },
-        rect => this.verticalSplit(rect,
+        rect => this.verticalSplit(this.vSplitterId, rect,
           hSplit,
           {},
           rect => {
-            for(let lbl of [ "Up", "Down", "Accent", "Slide" ]) {
-              this.drawKey(
-                { x: rect.x, y: rect.y, width: rect.width, height: this.cellHeight},
-                this.styles.labelText, { text: lbl, style: this.styles.labelText });
-              this.ctx.translate(0, this.cellHeight);
+            const lbls = [ "Up", "Down", "Accent", "Slide" ];
+            for(let i = 0; i < lbls.length; ++i) {
+              this.drawKey(this._getId(),
+                new Rect({...rect, y: i * this.cellHeight, height: this.cellHeight}),
+                this.styles.labelText, { text: lbls[i], style: this.styles.labelText });
             }
           },
           rect => {
@@ -206,101 +254,113 @@ get isDrawPass() {
             this.drawMeasures(rect, scrollX);
             this.drawAttibutes(rect, scrollX, scrollY);
             // Add a small shadow for depth.
-            this._drawRect({...rect, width: 20}, { fill: this.styles.colors.grdH });
-            this._drawRect({...rect, height: 20}, { fill: this.styles.colors.grdV });
+            this._drawRect(new Rect({...rect, width: 20}), { fill: this.styles.colors.shadowH });
+            this._drawRect(new Rect({...rect, height: 20}), { fill: this.styles.colors.shadowV });
           })
         );
+
+        if(this.isUpdatePass) {
+          if(this._activeId !== prevActiveId) {
+            this._redraw = true;
+          }
+        }
+
+        if(prevMaxId >= 0) {
+          if(prevMaxId !== this._currentId) {
+            throw new Error("Missmatch in id's between passes.");
+          }
+        }
+        prevMaxId = this._currentId;
     }
 
-      //let height = 0;
-      //height = cellHeight * 13;
-      //this.renderer.draw(w, h);//height);
-      ////ctx.translate(cellWidth, 14 * cellHeight);
-      //ctx.save();
-      //ctx.translate(50, 0);
-      //this.renderColumnSeparator(ctx, x, w, height, cellWidth);
-      //this.renderAttibutes(x, y, w, h, cellWidth, cellHeight, this.gridStyles.note);
-      //ctx.restore();
-      //this.renderer.drawPanel(
-      //  { x: 0, y: 0, width: cellWidth, height: this.renderer.cellHeight * 4},
-      //  { fill: "#000000", stroke: this.$vuetify.theme.currentTheme.cellSeparator, elevation: 8 },
-      //  /* eslint-disable no-unused-vars */
-      //  rect => {
-      //  /* eslint-enable no-unused-vars */
-      //  });
-      //ctx.restore();
-
-    //ctx.save();
-    //ctx.translate(50, 0);
-    //this.renderColumnSeparator(ctx, x, w, height, cellWidth);
-    //this.renderAttibutes(x, y, w, h, cellWidth, cellHeight, this.gridStyles.note);
-    //ctx.restore();
+    this._redraw = false;
   }
 
   getRow(y) { return Math.round(y / this.cellHeight); }
   getKeyFromRow(row) { return PianoRollRenderer.pitches[row % PianoRollRenderer.pitches.length]; }
   isKeySharp(key) { return key.includes("#") }
 
-  horizontalSplit(rect, splitY, style, content1, content2) {
+  horizontalSplit(id, rect, splitY, style, content1, content2) {
+    this._pushDrawRect(rect);
     const margin = this.splitterMargin * 2;
     const marginHalf = this.splitterMargin;
     const separator = Math.min(splitY, rect.height);
     this.drawPanel({...rect, height: separator - marginHalf }, style, content1);
     this.drawPanel({...rect, y: (rect.y + separator) + marginHalf, height: rect.height - (separator + marginHalf)}, style, content2);
-    this._drawRect({...rect, y: (rect.y + separator) - marginHalf, height: margin}, {});
+    this.drawSplitter(id, new Rect({...rect, y: (rect.y + separator) - marginHalf, height: margin}), {...this.styles.background, mouseCursor: "row-resize" });
+    this._popDrawRect();
   }
 
-  verticalSplit(rect, splitX, style, content1, content2) {
+  verticalSplit(id, rect, splitX, style, content1, content2) {
+    this._pushDrawRect(rect);
     const margin = this.splitterMargin * 2;
     const marginHalf = this.splitterMargin;
     const separator = Math.min(splitX, rect.width);
     this.drawPanel({...rect, width: separator - marginHalf }, style, content1);
     this.drawPanel({...rect, x: (rect.x + separator) + marginHalf, width: rect.width - (separator + marginHalf)}, style, content2);
-    this._drawRect({...rect, x: (rect.x + separator) - marginHalf, width: margin}, {});
+    this.drawSplitter(id, new Rect({...rect, x: (rect.x + separator) - marginHalf, width: margin}), {...this.styles.background, mouseCursor: "col-resize" });
+    this._popDrawRect();
   }
 
-  /* eslint-disable no-unused-vars */
+  drawSplitter(id, rect, style) {
+    if(this.isUpdatePass) {
+      if(rect.inside(this._localCursorPos)) {
+        this._activeId = id;
+      }
+    }
+
+    if(this._activeId === id) {
+      style = {...style};
+      style.stroke = "#ffffff";
+      style.strokeWidth = 2;
+      rect = new Rect(rect);
+      rect.x += style.strokeWidth;
+      rect.y += style.strokeWidth;
+      rect.width -= style.strokeWidth * 2;
+      rect.height -= style.strokeWidth * 2;
+      this._mouseCursor = style.mouseCursor ?? "default";
+    }
+    this._drawRect(rect, style);
+  }
+
   drawPanel(rect, style, content) {
-    this.ctx.save();
+    const innerRect = new Rect(0, 0, rect.width, rect.height);
+
+    this._pushDrawRect(rect);
     this._drawRect(rect, style);
     this._clipRect(rect);
-
-    this.ctx.save();
-    const innerRect = { x: 0, y: 0, width: rect.width, height: rect.height };
-    //const innerRect = { x: 0, y: 0, width: rect.width - rect.x, height: rect.height - rect.y };
+    this._pushDrawRect(innerRect);
     this.ctx.translate(rect.x, rect.y);
     content?.(innerRect);
-    this.ctx.restore()
-    this.ctx.restore()
+    this._popDrawRect();
+    this._popDrawRect();
   }
-  /* eslint-enable no-unused-vars */
 
   /* eslint-disable no-unused-vars */
   drawKeys(rect, scrollY) {
     // TODO: Handle scroll-offset.
     const pitches = [ "C'", "B", "A#", "A", "G#", "G", "F#", "F", "E", "D#", "D", "C#", "C" ];
 
-    this.ctx.save();
+    this._pushDrawRect(rect);
     this.ctx.translate(rect.x, rect.y);
-    for(let pitch of pitches) {
-      const sharpPitch = this.isKeySharp(pitch);
-      this.drawKey({...rect, x: 0, y: 0, height: this.cellHeight},
+    for(let i = 0; i < pitches.length; ++i) {
+      const sharpPitch = this.isKeySharp(pitches[i]);
+      this.drawKey(this._getId(),
+        new Rect({...rect, x: 0, y: i * this.cellHeight, height: this.cellHeight}),
         sharpPitch ? this.styles.pitchSharpText : this.styles.pitchText,
-        { text: pitch, style: sharpPitch ? this.styles.pitchSharpText : this.styles.pitchText });
-      this.ctx.translate(0, this.cellHeight);
+        { text: pitches[i], style: sharpPitch ? this.styles.pitchSharpText : this.styles.pitchText });
     }
-    this.ctx.restore();
+    this._popDrawRect();
   }
   /* eslint-enable no-unused-vars */
 
-  drawKey(rect, style, label) {
-    this.drawNote(rect, style, label);
+  drawKey(id, rect, style, label) {
+    this.drawNote(id, rect, style, label);
   }
 
   drawBackground(rect, scrollY) {
     // TODO: Handle scroll-offset.
-    this.ctx.save();
-    //this.ctx.translate(0, scrollY);
+    this._pushDrawRect(rect);
     const patternWidth = Math.min(this.pattern.notes.length * this.cellWidth, rect.width);
     const inactiveWidth = rect.width - patternWidth;
     for(let y = 0; y < rect.height; y += this.cellHeight) {
@@ -315,13 +375,11 @@ get isDrawPass() {
         this._drawRect({x: patternWidth, y: y, width: inactiveWidth, height: this.cellHeight}, {fill: style.fill});
       }
     }
-    this.ctx.restore();
-
+    this._popDrawRect();
   }
 
   drawMeasures(rect, scrollX) {
     // TODO: Handle scroll-offset.
-    //this.ctx.translate(scrollX, 0);
     let i = 0;
     for(let x = 0; x < rect.width; x += this.cellWidth) {
       const from = {x: rect.x + scrollX + x, y: rect.y};
@@ -335,12 +393,12 @@ get isDrawPass() {
     const noteOffsetY = [ 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
     const noteRest = 0xf;
 
-    this.ctx.save();
+    this._pushDrawRect(rect);
     this.ctx.translate(scrollX, scrollY);
     for(let i = 0; i < this.pattern.notes.length; ++i) {
       const note = this.pattern.notes[i];
       if(note.note !== noteRest) {
-        this.drawNote({
+        this.drawNote(this._getId(), {
           x: i * this.cellWidth,
           y: noteOffsetY[note.note] * this.cellHeight,
           width: this.cellWidth,
@@ -348,34 +406,51 @@ get isDrawPass() {
           }, this.styles.note);
       }
     }
-    this.ctx.restore();
+    this._popDrawRect();
   }
 
   drawAttibutes(rect, scrollX, scrollY) {
     // TODO: Handle scroll-offset.
     const attribs = [ "up", "down", "acc", "slide" ];
 
-    this.ctx.save();
+    this._pushDrawRect(rect);
     this.ctx.translate(scrollX, scrollY);
     for(let i = 0; i < this.pattern.notes.length; ++i) {
       const note = this.pattern.notes[i];
       if(note.note !== 0xf) {
         for(let j = 0; j < attribs.length; ++j) {
           if(note[attribs[j]]) {
-            this.drawNote({
-              x: i * this.cellWidth,
-              y: j * this.cellHeight,
-              width: this.cellWidth,
-              height: this.cellHeight
-            }, this.styles.note);
+            this.drawNote(this._getId(),{
+                x: i * this.cellWidth,
+                y: j * this.cellHeight,
+                width: this.cellWidth,
+                height: this.cellHeight
+              }, this.styles.note);
           }
         }
       }
     }
-    this.ctx.restore();
+    this._popDrawRect();
   }
 
-  drawNote(rect, style, label) {
+  drawNote(id, rect, style, label) {
+    if(this.isUpdatePass) {
+      const myRect = new Rect(rect);
+      if(myRect.inside(this._localCursorPos)) {
+        this._activeId = id;
+      }
+    }
+
+    if(this._activeId === id) {
+      style = {...style};
+      style.stroke = "#ffffff";
+      style.strokeWidth = 2;
+      rect = new Rect(rect);
+      rect.x += style.strokeWidth;
+      rect.y += style.strokeWidth;
+      rect.width -= style.strokeWidth * 2;
+      rect.height -= style.strokeWidth * 2;
+    }
     this._drawRect(rect, style);
     if(label && label.text) {
       this._drawText(rect, label, style);
@@ -408,7 +483,7 @@ get isDrawPass() {
       return;
     }
 
-    this.ctx.save();
+    this._pushDrawRect(rect);
     this.ctx.beginPath();
     if(style.elevation) {
       this.ctx.shadowColor = style.elevationColor ?? "#000000";
@@ -428,7 +503,7 @@ get isDrawPass() {
     if(style.stroke) {
       this.ctx.stroke();
     }
-    this.ctx.restore();
+    this._popDrawRect();
   }
 
   _drawLine(from, to, style) {
@@ -468,6 +543,43 @@ get isDrawPass() {
     this.ctx.restore();
   }
 
+  get _currentDrawRect() {
+    if(this._drawRectStack.length > 0) {
+      return this._drawRectStack[this._drawRectStack.length - 1];
+    }
+    return this.viewport;
+  }
+
+  get _absolutePos() {
+    let pos = { x: 0, y: 0};
+    for(let i = (this._drawRectStack.length - 1); i >= 0; --i) {
+      pos.x += this._drawRectStack[i].x;
+      pos.y += this._drawRectStack[i].y;
+    }
+
+    return pos;
+  }
+
+  get _localCursorPos() {
+    const absPos = this._absolutePos;
+    const cursorPos = this._cursorPos;
+    return { x: cursorPos.x - absPos.x, y: cursorPos.y - absPos.y };
+  }
+
+  _pushDrawRect(rect) {
+    this._drawRectStack.push(rect);
+    this.ctx.save();
+  }
+
+  _popDrawRect() {
+    this.ctx.restore();
+    return this._drawRectStack.pop();
+  }
+
+  _getId() {
+    return this._currentId++;
+  }
+
   /*
   drawMeasures(offsetX) {
     this.ctx.save();
@@ -497,7 +609,6 @@ export default {
       canvasHeight: 300,
       renderer: null,
       keys: noteLabels,
-      selection: null,
       settings: {
         maxScrollbarLength: 60,
       },
@@ -555,6 +666,9 @@ export default {
         selectedNote: {
           fill: this.$vuetify.theme.currentTheme.noteColor,
           stroke: this.$vuetify.theme.currentTheme.selectedNoteStroke,
+        },
+        background: {
+          fill: this.$vuetify.theme.currentTheme.cellSeparator
         }
       },
     };
@@ -647,7 +761,7 @@ export default {
     handleResize() {
       //that.$nextTick(() => that.render());
       this.canvas.height = this.renderer.height;
-      requestAnimationFrame(this.render);
+      requestAnimationFrame(() => this.render(true));
     },
     updatePatternNotes() {
       this.currentPattern = {
@@ -693,19 +807,18 @@ export default {
       }
 
       // Re-size if needed.
-      this.canvasWidth = this.canvas.clientWidth;
-      this.canvasHeight = this.renderer.height;//this.canvas.clientHeight;
-      if(!force) {
-        if((this.canvas.width == this.canvasWidth) && (this.canvas.height === this.canvasHeight)) {
-          requestAnimationFrame(this.render);
-          return;
-        }
+      this.canvasWidth = Math.round(this.canvas.clientWidth);
+      this.canvasHeight = Math.round(this.renderer.height);//this.canvas.clientHeight;
+      if(force || (Math.round(this.canvas.width) !== this.canvasWidth) || (Math.round(this.canvas.height) !== this.canvasHeight)) {
+        this.canvas.width = this.canvasWidth;
+        this.canvas.height = this.canvasHeight;
+        this.canvas.style.height = this.canvasHeight.toString() + "px";
+        this.renderer.resize(this.canvasWidth, this.canvasHeight);
       }
-      this.canvas.width = this.canvasWidth;
-      this.canvas.height = this.canvasHeight;
-      this.canvas.style.height = this.canvasHeight.toString() + "px";
+
       this.renderer.draw(this.canvasWidth, this.canvasHeight);
-      requestAnimationFrame(this.render);
+      this.canvas.style.cursor = this.renderer.mouseCursor;
+      requestAnimationFrame(() => this.render(false));
     },
     onMouseMove(evt) {
       const bounds = this.ctx.canvas.getBoundingClientRect();
@@ -718,20 +831,11 @@ export default {
       if((posX >= 0) && (posX < width) && (posY >= 0) && (posY < height))
       {
         if(this.renderer) this.renderer.cursorPos = { x: posX, y: posY };
-        const cell = Math.floor((posX / width) * 17);
-        const row = Math.floor((posY / height) * 19);
-        const reRender = (!this.selection) || (cell !== this.selection.x) || (row !== this.selection.y);
-        this.selection = { x: cell, y: row };
-        if(reRender) {
-          //this.render();
-        }
-        //console.log(`x: ${cell} y: ${row}`);
         //this.$emit("mouse-move", evt);
       }
       else
       {
         if(this.renderer) this.renderer.cursorPos = { x: -100, y: -100 };
-        this.selection = null;
       }
     },
     /* eslint-disable no-unused-vars */
