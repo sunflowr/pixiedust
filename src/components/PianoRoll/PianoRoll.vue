@@ -36,6 +36,7 @@
 </style>
 
 <script>
+import { UIEventTypes, Rect, UI } from "@/ui";
 //import VuePerfectScrollbar from "vue-perfect-scrollbar";
 
 /* eslint-disable no-unused-vars */
@@ -59,108 +60,52 @@ const stepIndices = [
 const noteLabels = [ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C'" ];
 /* eslint-enable no-unused-vars */
 
-class Rect
-{
-  constructor(x, y, width, height) {
-    if(x instanceof Rect) {
-      this.x = x.x;
-      this.y = x.y;
-      this.width = x.width;
-      this.height = x.height;
-    } else if(x instanceof Object) {
-      this.x = x.x;
-      this.y = x.y;
-      this.width = x.width;
-      this.height = x.height;
-    } else if((!isNaN(x)) &&
-              (!isNaN(y)) &&
-              (!isNaN(width)) &&
-              (!isNaN(height))) {
-      this.x = x;
-      this.y = y;
-      this.width = width;
-      this.height = height;
-    } else {
-      throw new TypeError("Arugment is of wrong type");
+class UINote {
+  draw(ui, id, rect, content, /*state*/) {
+    ui._drawRect(rect, this.style);
+    if(content) {
+      this.ui._drawText(rect, content, this.style);
     }
-  }
-
-  get top() { return this.y; }
-  get bottom() { return this.y + this.height; }
-  get left() { return this.x; }
-  get right() { return this.x + this.width; }
-
-  inside(x, y) {
-    if(x instanceof Object) {
-      y = x.y;
-      x = x.x;
-    }
-    return (x >= this.left) && (x <= this.right) && (y >= this.top) && (y <= this.bottom);
   }
 }
-
-/*class Panel
-{
-  constructor(ctx, rect, style, content) {
-    this.rect = rect;
-    this.content = content;
-  }
-
-  draw() {
-    this.ctx.save();
-    this._drawRect(this.rect, this.style);
-    this._clipRect(this.rect);
-
-    this.ctx.save();
-    const innerRect = { x: 0, y: 0, width: this.rect.width, height: this.rect.height };
-    //const innerRect = { x: 0, y: 0, width: rect.width - rect.x, height: rect.height - rect.y };
-    this.ctx.translate(this.rect.x, this.rect.y);
-    this.content?.(innerRect);
-    this.ctx.restore()
-    this.ctx.restore()
-  }
-}*/
 
 class PianoRollRenderer
 {
   static pitches = [ "C'", "B", "A#", "A", "G#", "G", "F#", "F", "E", "D#", "D", "C#", "C" ];
 
-  constructor(ctx, styles) {
-    this.ctx = ctx;
+  constructor(ui, styles) {
+    this.ui = ui;
     this.styles = styles;
     this.viewport = { x: 0, y: 0, width: 0, height: 0 }; 
     this.keyWidth = 60;
     this.cellWidth = 50;
     this.cellHeight = 24;
     this.splitterMargin = 2;
-    this._cursorPos = { x: -100, y: -100 };
     this._pattern = { notes: [] };
     this.styles.colors = {};
-    this.styles.colors.shadowH = this.ctx.createLinearGradient(0, 0, 20, 0);
+    this.styles.colors.shadowH = this.ui.canvasCtx.createLinearGradient(0, 0, 20, 0);
     this.styles.colors.shadowH.addColorStop(0, "rgba(0,0,0,0.3)");
     this.styles.colors.shadowH.addColorStop(1, "rgba(0,0,0,0.0)");
-    this.styles.colors.shadowV = this.ctx.createLinearGradient(0, 0, 0, 20);
+    this.styles.colors.shadowV = this.ui.canvasCtx.createLinearGradient(0, 0, 0, 20);
     this.styles.colors.shadowV.addColorStop(0, "rgba(0,0,0,0.3)");
     this.styles.colors.shadowV.addColorStop(1, "rgba(0,0,0,0.0)");
+    this.styles.note2 = new UINote();
+    this.styles.colors.note = {}
+    this.styles.colors.note.fill = this.ui.canvasCtx.createLinearGradient(0, 0, 0, this.cellHeight);
+    this.styles.colors.note.fill.addColorStop(0, "rgb(255,255,255");
+    this.styles.colors.note.fill.addColorStop(0.1, "rgb(255,50,0");
+    this.styles.colors.note.fill.addColorStop(0.9, "rgb(100,50,0");
+    this.styles.colors.note.fill.addColorStop(1, "rgb(0,0,0");
+    this.styles.colors.note.stroke = "#000000";
+    this.styles.colors.note.strokeWidth = 1;
 
-    this._drawRectStack = [];
-    this._activeId = -1;
-    this._hoverId = -1;
-    this._currentId = -1;
 
     this.vSplitterId = 10000;
+    this.hSplit = this.keyWidth;
+    this.vSplit = this.viewport.height - (this.cellHeight * 4);
 
-    this._updatePass = -1;
-    this._redraw = true;
-    this._mouseCursor = "default";
-  }
-
-  get isUpdatePass() {
-    return this._updatePass === 0;
-  }
-
-  get isDrawPass() {
-    return this._updatePass === 1;
+    this.scrollState = { x: 0, y: 0 };
+    this.headerHeight = this.cellHeight;
   }
 
   get pattern() {
@@ -171,290 +116,187 @@ class PianoRollRenderer
     this._pattern = value;
   }
 
-  set cursorPos(value) {
-    this._cursorPos = value;
-  }
-
   get width() {
     return this.keyWidth + (this.splitterMargin * 2) + (this.pattern.notes.length * this.cellWidth);
   }
 
   get height() {
-    return (PianoRollRenderer.pitches.length * this.cellHeight) + (this.splitterMargin * 2) + (4 * this.cellHeight);
+    return this.headerHeight +
+      (PianoRollRenderer.pitches.length * this.cellHeight) +
+      (this.splitterMargin * 2) +
+      (4 * this.cellHeight);
   }
 
-  get mouseCursor() {
-    return this._mouseCursor;
-  }
-
-  resize(width, height) {
-    this.viewport.width = width;
-    this.viewport.height = height;
-    this._redraw = true;
-  }
-
-  draw(width, height) {
-    this.viewport.width = width;
-    this.viewport.height = height;
+  draw(rect) {
+    this.viewport.width = rect.width;
+    this.viewport.height = rect.height;
 
     const scrollX = 0;
     const scrollY = 0;
-    const hSplit = this.keyWidth;
-    const vSplit = this.viewport.height - (this.cellHeight * 4);
 
-    let prevMaxId = -1;
-    let prevActiveId = this._activeId;
-    this._activeId = -1;
-    this._mouseCursor = "default";
-    for(let p = 0; p < 2; ++p) {
-      this._currentId = 0;
-      this._updatePass = p;
+    if(UI.currentEvent.type === UIEventTypes.drawEvent) {
+      this.ui.canvasCtx.beginPath();
+      this.ui.canvasCtx.rect(0, 0, this.viewport.width, this.viewport.height);
+      this.ui.canvasCtx.clip();
+    }
 
-      if(this.isDrawPass && (!this._redraw)) {
-        return;
-      }
+    this.hSplit = this.keyWidth;
+    this.vSplit = this.viewport.height - this.headerHeight - (this.cellHeight * 4);
 
-      if(this.isDrawPass) {
-        console.log("draw");
-        this.ctx.beginPath();
-        this.ctx.rect(0, 0, this.viewport.width, this.viewport.height);
-        this.ctx.clip();
-      }
+    //const patternWidth = this.pattern.notes.length * this.cellWidth;
 
-      this.horizontalSplit(this._getId(), new Rect(0, 0, this.viewport.width, this.viewport.height),
-        vSplit,
-        {},
-        rect => {
-          this.verticalSplit(this.vSplitterId, new Rect({...rect, height: Math.min(rect.height, this.cellHeight * 13)}),
-          hSplit,
+    this.drawLabel(new Rect(0, 0, this.viewport.width, this.headerHeight), this.styles.darkRow, { text: "Pattern preview", style: this.styles.labelText });
+    this.ui.horizontalSplit(UI.getId(), new Rect(0, this.headerHeight, this.viewport.width, this.viewport.height - this.headerHeight),
+      this.vSplit,
+      this.styles.lightRow,
+      rect => {
+        this.ui.verticalSplit(this.vSplitterId, new Rect({...rect, height: Math.min(rect.height, this.cellHeight * 13)}),
+          this.hSplit,
           this.styles.lightRow,
           rect => this.drawKeys(rect, scrollY),
           rect => {
-            this.drawBackground(rect, scrollY);
-            this.drawMeasures(rect, scrollX);
-            this.drawNotes(rect, scrollX, scrollY);
-            // Add a small shadow for depth.
-            this._drawRect(new Rect({...rect, width: 20}), { fill: this.styles.colors.shadowH });
-            this._drawRect(new Rect({...rect, height: 20}), { fill: this.styles.colors.shadowV });
+            //this.scrollState = this.ui.scrollView(new Rect(rect), {}, new Rect({...rect, width: patternWidth}), this.scrollState, rect => {
+              this.drawBackground(new Rect(rect), scrollY);
+              this.drawMeasures(new Rect(rect), scrollX);
+              this.drawNotes(new Rect(rect), scrollX, scrollY);
+              // Add a small shadow for depth.
+              this.ui.canvasCtx.save();
+              this.ui.canvasCtx.translate(rect.left, rect.top);
+              this.ui._drawRect(new Rect(0, 0, 20, rect.height), { fill: this.styles.colors.shadowH });
+              this.ui._drawRect(new Rect(0, 0, rect.width, 20), { fill: this.styles.colors.shadowV });
+              this.ui.canvasCtx.restore();
+            //});
           });
-        },
-        rect => this.verticalSplit(this.vSplitterId, rect,
-          hSplit,
-          {},
+      },
+      rect => {
+        this.ui.verticalSplit(this.vSplitterId, rect, this.hSplit, this.styles.lightRow,
           rect => {
             const lbls = [ "Up", "Down", "Accent", "Slide" ];
             for(let i = 0; i < lbls.length; ++i) {
-              this.drawKey(this._getId(),
-                new Rect({...rect, y: i * this.cellHeight, height: this.cellHeight}),
-                this.styles.labelText, { text: lbls[i], style: this.styles.labelText });
+              this.drawLabel(new Rect(rect.left, rect.top + (i * this.cellHeight), rect.width, this.cellHeight),
+                this.styles.labelText,
+                { text: lbls[i], style: this.styles.labelText });
             }
           },
           rect => {
-            this.drawBackground(rect, 0);
-            this.drawMeasures(rect, scrollX);
-            this.drawAttibutes(rect, scrollX, scrollY);
+            this.drawBackground(new Rect(rect), 0);
+            this.drawMeasures(new Rect(rect), scrollX);
+            this.drawAttibutes(new Rect(rect), scrollX, scrollY);
             // Add a small shadow for depth.
-            this._drawRect(new Rect({...rect, width: 20}), { fill: this.styles.colors.shadowH });
-            this._drawRect(new Rect({...rect, height: 20}), { fill: this.styles.colors.shadowV });
-          })
-        );
-
-        if(this.isUpdatePass) {
-          if(this._activeId !== prevActiveId) {
-            this._redraw = true;
-          }
-        }
-
-        if(prevMaxId >= 0) {
-          if(prevMaxId !== this._currentId) {
-            throw new Error("Missmatch in id's between passes.");
-          }
-        }
-        prevMaxId = this._currentId;
-    }
-
-    this._redraw = false;
+            this.ui.canvasCtx.save();
+            this.ui.canvasCtx.translate(rect.left, rect.top);
+            this.ui._drawRect(new Rect(0, 0, 20, rect.height), { fill: this.styles.colors.shadowH });
+            this.ui._drawRect(new Rect(0, 0, rect.width, 20), { fill: this.styles.colors.shadowV });
+            this.ui.canvasCtx.restore();
+          });
+      });
   }
 
   getRow(y) { return Math.round(y / this.cellHeight); }
   getKeyFromRow(row) { return PianoRollRenderer.pitches[row % PianoRollRenderer.pitches.length]; }
   isKeySharp(key) { return key.includes("#") }
 
-  horizontalSplit(id, rect, splitY, style, content1, content2) {
-    this._pushDrawRect(rect);
-    const margin = this.splitterMargin * 2;
-    const marginHalf = this.splitterMargin;
-    const separator = Math.min(splitY, rect.height);
-    this.drawPanel({...rect, height: separator - marginHalf }, style, content1);
-    this.drawPanel({...rect, y: (rect.y + separator) + marginHalf, height: rect.height - (separator + marginHalf)}, style, content2);
-    this.drawSplitter(id, new Rect({...rect, y: (rect.y + separator) - marginHalf, height: margin}), {...this.styles.background, mouseCursor: "row-resize" });
-    this._popDrawRect();
-  }
-
-  verticalSplit(id, rect, splitX, style, content1, content2) {
-    this._pushDrawRect(rect);
-    const margin = this.splitterMargin * 2;
-    const marginHalf = this.splitterMargin;
-    const separator = Math.min(splitX, rect.width);
-    this.drawPanel({...rect, width: separator - marginHalf }, style, content1);
-    this.drawPanel({...rect, x: (rect.x + separator) + marginHalf, width: rect.width - (separator + marginHalf)}, style, content2);
-    this.drawSplitter(id, new Rect({...rect, x: (rect.x + separator) - marginHalf, width: margin}), {...this.styles.background, mouseCursor: "col-resize" });
-    this._popDrawRect();
-  }
-
-  drawSplitter(id, rect, style) {
-    if(this.isUpdatePass) {
-      if(rect.inside(this._localCursorPos)) {
-        this._activeId = id;
-      }
-    }
-
-    if(this._activeId === id) {
-      style = {...style};
-      style.stroke = "#ffffff";
-      style.strokeWidth = 2;
-      rect = new Rect(rect);
-      rect.x += style.strokeWidth;
-      rect.y += style.strokeWidth;
-      rect.width -= style.strokeWidth * 2;
-      rect.height -= style.strokeWidth * 2;
-      this._mouseCursor = style.mouseCursor ?? "default";
-    }
-    this._drawRect(rect, style);
-  }
-
-  drawPanel(rect, style, content) {
-    const innerRect = new Rect(0, 0, rect.width, rect.height);
-
-    this._pushDrawRect(rect);
-    this._drawRect(rect, style);
-    this._clipRect(rect);
-    this._pushDrawRect(innerRect);
-    this.ctx.translate(rect.x, rect.y);
-    content?.(innerRect);
-    this._popDrawRect();
-    this._popDrawRect();
-  }
-
   /* eslint-disable no-unused-vars */
   drawKeys(rect, scrollY) {
     // TODO: Handle scroll-offset.
     const pitches = [ "C'", "B", "A#", "A", "G#", "G", "F#", "F", "E", "D#", "D", "C#", "C" ];
 
-    this._pushDrawRect(rect);
-    this.ctx.translate(rect.x, rect.y);
     for(let i = 0; i < pitches.length; ++i) {
       const sharpPitch = this.isKeySharp(pitches[i]);
-      this.drawKey(this._getId(),
-        new Rect({...rect, x: 0, y: i * this.cellHeight, height: this.cellHeight}),
+      this.drawLabel(new Rect(rect.left, rect.top + (i * this.cellHeight), rect.width, this.cellHeight),
         sharpPitch ? this.styles.pitchSharpText : this.styles.pitchText,
         { text: pitches[i], style: sharpPitch ? this.styles.pitchSharpText : this.styles.pitchText });
     }
-    this._popDrawRect();
   }
   /* eslint-enable no-unused-vars */
 
-  drawKey(id, rect, style, label) {
-    this.drawNote(id, rect, style, label);
-  }
-
   drawBackground(rect, scrollY) {
     // TODO: Handle scroll-offset.
-    this._pushDrawRect(rect);
     const patternWidth = Math.min(this.pattern.notes.length * this.cellWidth, rect.width);
     const inactiveWidth = rect.width - patternWidth;
-    for(let y = 0; y < rect.height; y += this.cellHeight) {
+    for(let y = rect.top; y < rect.bottom; y += this.cellHeight) {
       const row = this.getRow(scrollY + y);
       const key = this.getKeyFromRow(row);
       const isSharpKey = this.isKeySharp(key);
       const style = isSharpKey ? this.styles.darkRow : this.styles.lightRow;
-      this._drawRect({x: 0, y: y, width: patternWidth, height: this.cellHeight}, {fill: style.fill});
+      this.ui._drawRect(new Rect(rect.x, y, patternWidth, this.cellHeight), {fill: style.fill});
 
       if(inactiveWidth > 0) {
         const style = isSharpKey ? this.styles.inactiveDarkRow : this.styles.ianctiveLightRow;
-        this._drawRect({x: patternWidth, y: y, width: inactiveWidth, height: this.cellHeight}, {fill: style.fill});
+        this.ui._drawRect(new Rect(rect.x + patternWidth, y, inactiveWidth, this.cellHeight), {fill: style.fill});
       }
     }
-    this._popDrawRect();
   }
 
   drawMeasures(rect, scrollX) {
     // TODO: Handle scroll-offset.
     let i = 0;
-    for(let x = 0; x < rect.width; x += this.cellWidth) {
-      const from = {x: rect.x + scrollX + x, y: rect.y};
-      this._drawLine(from, {...from, y: from.y + rect.height}, {...this.styles.lightRow, lineWidth: (i % 4) === 0 ? 2 : 1})
+    for(let x = rect.left; x < rect.right; x += this.cellWidth) {
+      const from = {x: x + scrollX, y: rect.top};
+      const to = {x: from.x, y: rect.bottom};
+      this.ui._drawLine(from, to, {...this.styles.lightRow, lineWidth: (i % 4) === 0 ? 2 : 1})
       i++;
     }
   }
 
+  /* eslint-disable no-unused-vars */
   drawNotes(rect, scrollX, scrollY) {
     // TODO: Handle scroll-offset.
     const noteOffsetY = [ 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
     const noteRest = 0xf;
 
-    this._pushDrawRect(rect);
-    this.ctx.translate(scrollX, scrollY);
     for(let i = 0; i < this.pattern.notes.length; ++i) {
       const note = this.pattern.notes[i];
       if(note.note !== noteRest) {
-        this.drawNote(this._getId(), {
-          x: i * this.cellWidth,
-          y: noteOffsetY[note.note] * this.cellHeight,
-          width: this.cellWidth,
-          height: this.cellHeight
-          }, this.styles.note);
+        const x = rect.left + (i * this.cellWidth);
+        const y = rect.top + (noteOffsetY[note.note] * this.cellHeight);
+        this.drawNote(new Rect(x, y, this.cellWidth, this.cellHeight), this.styles.note);
       }
     }
-    this._popDrawRect();
   }
+  /* eslint-enable no-unused-vars */
 
+  /* eslint-disable no-unused-vars */
   drawAttibutes(rect, scrollX, scrollY) {
     // TODO: Handle scroll-offset.
     const attribs = [ "up", "down", "acc", "slide" ];
 
-    this._pushDrawRect(rect);
-    this.ctx.translate(scrollX, scrollY);
     for(let i = 0; i < this.pattern.notes.length; ++i) {
       const note = this.pattern.notes[i];
       if(note.note !== 0xf) {
         for(let j = 0; j < attribs.length; ++j) {
           if(note[attribs[j]]) {
-            this.drawNote(this._getId(),{
-                x: i * this.cellWidth,
-                y: j * this.cellHeight,
-                width: this.cellWidth,
-                height: this.cellHeight
-              }, this.styles.note);
+            const x = rect.left + (i * this.cellWidth);
+            const y = rect.top + (j * this.cellHeight);
+            this.drawNote(new Rect(x, y, this.cellWidth, this.cellHeight), this.styles.note);
+            //this.note(new Rect(x, y, this.cellWidth, this.cellHeight));
           }
         }
       }
     }
-    this._popDrawRect();
+  }
+  /* eslint-enable no-unused-vars */
+  
+  note(rect, label) {
+    return this.ui.doButton(UI.getId(), rect, label, this.styles.note2);
   }
 
-  drawNote(id, rect, style, label) {
-    if(this.isUpdatePass) {
-      const myRect = new Rect(rect);
-      if(myRect.inside(this._localCursorPos)) {
-        this._activeId = id;
+  drawLabel(rect, style, label) {
+    this.ui.label(UI.getId(), rect, style, (rect, style) => {
+      this.ui._drawRect(rect, style);
+      if(label && label.text) {
+        this.ui._drawText(rect, label, style);
       }
-    }
+    });
+  }
 
-    if(this._activeId === id) {
-      style = {...style};
-      style.stroke = "#ffffff";
-      style.strokeWidth = 2;
-      rect = new Rect(rect);
-      rect.x += style.strokeWidth;
-      rect.y += style.strokeWidth;
-      rect.width -= style.strokeWidth * 2;
-      rect.height -= style.strokeWidth * 2;
-    }
-    this._drawRect(rect, style);
-    if(label && label.text) {
-      this._drawText(rect, label, style);
-    }
+  drawNote(rect, style, label) {
+    return this.ui.button(UI.getId(), rect, style, (rect, style) => {
+      this.ui._drawRect(rect, style);
+      if(label && label.text) {
+        this.ui._drawText(rect, label, style);
+      }
+    });
   }
 
   drawPlayHead(ctx, x, height, style) {
@@ -467,135 +309,6 @@ class PianoRollRenderer
     ctx.shadowBlur = 0;
     ctx.stroke();
   }
-
-  _clipRect(rect) {
-    if(!this.isDrawPass) {
-      return;
-    }
-
-    this.ctx.beginPath();
-    this.ctx.rect(rect.x, rect.y, rect.width, rect.height);
-    this.ctx.clip();
-  }
-
-  _drawRect(rect, style) {
-    if(!this.isDrawPass) {
-      return;
-    }
-
-    this._pushDrawRect(rect);
-    this.ctx.beginPath();
-    if(style.elevation) {
-      this.ctx.shadowColor = style.elevationColor ?? "#000000";
-      this.ctx.shadowBlur = style.elevation;
-    }
-    if(style.stroke) {
-      this.ctx.lineWidth = style.strokeWidth ?? 2;
-      this.ctx.strokeStyle = style.stroke;
-    }
-    if(style.fill) {
-      this.ctx.fillStyle = style.fill;
-    }
-    this.ctx.rect(rect.x, rect.y, rect.width, rect.height);
-    if(style.fill) {
-      this.ctx.fill();
-    }
-    if(style.stroke) {
-      this.ctx.stroke();
-    }
-    this._popDrawRect();
-  }
-
-  _drawLine(from, to, style) {
-    if(!this.isDrawPass) {
-      return;
-    }
-
-    this.ctx.save();
-    this.ctx.beginPath();
-    this.ctx.lineWidth = style.lineWidth ?? 1;
-    this.ctx.strokeStyle = style.stroke ?? "#000000";
-    this.ctx.moveTo(from.x, from.y);
-    this.ctx.lineTo(to.x, to.y);
-    this.ctx.stroke();
-    this.ctx.restore();
-  }
-
-  _drawText(rect, label, style) {
-    if(!this.isDrawPass) {
-      return;
-    }
-
-    // TODO: Clean up.
-    this.ctx.save()
-    this.ctx.translate(rect.x, rect.y);
-    this.ctx.beginPath();
-    this.ctx.lineWidth = 2;
-    this.ctx.fillStyle = style.fill;
-    this.ctx.strokeStyle = style.stroke;
-    if (label && label.text) {
-      this.ctx.font = "12px sans-serif";
-      this.ctx.fillStyle = label.style.textFill;
-      this.ctx.textAlign = "center";
-      this.ctx.textBaseline = "middle";
-      this.ctx.fillText(label.text, rect.width / 2, rect.height / 2);
-    }
-    this.ctx.restore();
-  }
-
-  get _currentDrawRect() {
-    if(this._drawRectStack.length > 0) {
-      return this._drawRectStack[this._drawRectStack.length - 1];
-    }
-    return this.viewport;
-  }
-
-  get _absolutePos() {
-    let pos = { x: 0, y: 0};
-    for(let i = (this._drawRectStack.length - 1); i >= 0; --i) {
-      pos.x += this._drawRectStack[i].x;
-      pos.y += this._drawRectStack[i].y;
-    }
-
-    return pos;
-  }
-
-  get _localCursorPos() {
-    const absPos = this._absolutePos;
-    const cursorPos = this._cursorPos;
-    return { x: cursorPos.x - absPos.x, y: cursorPos.y - absPos.y };
-  }
-
-  _pushDrawRect(rect) {
-    this._drawRectStack.push(rect);
-    this.ctx.save();
-  }
-
-  _popDrawRect() {
-    this.ctx.restore();
-    return this._drawRectStack.pop();
-  }
-
-  _getId() {
-    return this._currentId++;
-  }
-
-  /*
-  drawMeasures(offsetX) {
-    this.ctx.save();
-    for(let x = 0; x < this.width; x += columnWidth) {
-      this.ctx.beginPath();
-      this.ctx.lineWidth = (i % 4) === 0 ? 2 : 1;
-      this.ctx.strokeStyle = this.gridStyles.lightRow.stroke;
-      this.ctx.moveTo(0, 0);
-      this.ctx.lineTo(0, height);
-      this.ctx.stroke();
-      this.ctx.translate(columnWidth, 0);
-      i++;
-    }
-    this.ctx.restore();
-  }*/
-
 }
 
 export default {
@@ -703,7 +416,8 @@ export default {
     pattern() { this.updatePatternNotes(); this.render(true); }
   },
   mounted() {
-    this.renderer = new PianoRollRenderer(this.canvas?.getContext("2d"), this.gridStyles);
+    UI.instance.canvasCtx = this.ctx;
+    this.renderer = new PianoRollRenderer(UI.instance, this.gridStyles);
     window.addEventListener('resize', this.handleResize);
     this.updatePatternNotes();
     this.handleResize();
@@ -813,11 +527,15 @@ export default {
         this.canvas.width = this.canvasWidth;
         this.canvas.height = this.canvasHeight;
         this.canvas.style.height = this.canvasHeight.toString() + "px";
-        this.renderer.resize(this.canvasWidth, this.canvasHeight);
+        UI.instance.resize(this.canvasWidth, this.canvasHeight);
       }
 
-      this.renderer.draw(this.canvasWidth, this.canvasHeight);
-      this.canvas.style.cursor = this.renderer.mouseCursor;
+      UI.instance.begin();
+      UI.instance.update(rect => {
+        this.renderer.draw(rect);//new Rect(0, 0, this.canvasWidth, this.canvasHeight));
+      });
+      UI.instance.end();
+      this.canvas.style.cursor = UI.instance.mouseCursor;
       requestAnimationFrame(() => this.render(false));
     },
     onMouseMove(evt) {
@@ -830,20 +548,22 @@ export default {
       const height = Math.floor(bounds.height * scaleV);
       if((posX >= 0) && (posX < width) && (posY >= 0) && (posY < height))
       {
-        if(this.renderer) this.renderer.cursorPos = { x: posX, y: posY };
+        UI.instance.cursorPos = { x: posX, y: posY };
         //this.$emit("mouse-move", evt);
       }
       else
       {
-        if(this.renderer) this.renderer.cursorPos = { x: -100, y: -100 };
+        UI.instance.cursorPos = { x: -100, y: -100 };
       }
     },
     /* eslint-disable no-unused-vars */
     /* eslint-disable no-console */
     onMouseDown(evt) {
+      UI.instance.mouseDown = 1;
       //this.$emit("mouse-down", evt);
     },
     onMouseUp(evt) {
+      UI.instance.mouseUp = 1;
       //this.$emit("mouse-up", evt);
     },
     scrollX(evt) {
