@@ -5,7 +5,6 @@ import { DataTypes } from "@/datatypes";
 
 export class Settings {
     constructor(settings) {
-        const schema = new Schema();
         if (typeof settings === "object") {
             if (settings instanceof Uint8Array) {
                 const deserializer = new BinarySerializer(settings);
@@ -17,36 +16,32 @@ export class Settings {
                 this.versionMinor = deserializer.deserialize(DataTypes.uint8);
                 this.versionPatch = deserializer.deserialize(DataTypes.uint8);
                 const schemaVersion = this.getSchema();
-                if (schemaVersion) {
-                    const entries = Object.entries(schemaVersion);
-                    for (let i = 4; i < entries.length; ++i) {
-                        const key = entries[i][0];
-                        const val = entries[i][1]
-                        this[key] = deserializer.deserialize(DataTypes[val.type]);
-                    }
+                const settings = Schema.deserialize(settingsSchema, this.getVersionString(), deserializer, 4);
+                for (let i = 4; i < schemaVersion.length; ++i) {
+                    const val = schemaVersion[i];
+                    this[val.id] = deserializer.deserialize(DataTypes[val.type]);
                 }
             }
             else {
                 // TODO: Transfer settings.
                 // TODO: Set version number so getSchema() works.
-                const version = settings.versionMajor + "." + settings.versionMinor + "." + settings.versionPatch;
-                Object.assign(this, schema.create(settingsSchema, version));
+                const version = Schema.getVersionString(settings.versionMajor, settings.versionMinor, settings.versionPatch);
+                Object.assign(this, Schema.create(settingsSchema, version));
                 for(const [key, value] of Object.entries(settings)) {
                     this[key] = value;
                 }
             }
         } else {
             // TODO: Set version number so getSchema() works.
-            Object.assign(this, schema.create(settingsSchema, settingsSchema.latest));
+            Object.assign(this, Schema.create(settingsSchema, settingsSchema.latest));
         }
     }
 
     getVersionString() {
-        return this.versionMajor + "." + this.versionMinor + "." + this.versionPatch;
+        return Schema.getVersionString(this.versionMajor, this.versionMinor, this.versionPatch);
     }
 
     getSchema() {
-        const schema = new Schema();
-        return schema.getSchemaVersion(settingsSchema, this.getVersionString());
+        return Schema.getSchemaVersion(settingsSchema, this.getVersionString());
     }
 }

@@ -7,7 +7,7 @@ import { checksumUtil } from "../checksumutil";
 
 class SysExUtil {
     /**
-     * Converts a array of uint8 to nibbels, splitting each byte in to two.
+     * Converts an array of uint8 to nibbles, splitting each byte in to two.
      * @param {Uint8Array} data The data to convert
      * @returns {Uint8Array}
      */
@@ -22,7 +22,7 @@ class SysExUtil {
     }
 
     /**
-     * Converts a array of uint8 containing nibbels by converting each parit in to a single byte.
+     * Converts an array of uint8 containing nibbles by converting each pair in to a single byte.
      * @param {Uint8Array} data The data to convert
      * @returns {Uint8Array}
      */
@@ -40,7 +40,7 @@ class SysExUtil {
      * @param {boolean} withSysExHeader If we should include the SysEx header as well
      * @param {sysExTypes} type
      * @param {Number} totalPackages
-     * @param {Number} checksum
+     * @param {Number} finalChecksum
      * @returns {Uint8Array}
      */
      makeBeginUploadPackage(withSysExHeader, type, totalPackages, finalChecksum) {
@@ -49,7 +49,7 @@ class SysExUtil {
         if (withSysExHeader) {
             // SysEx start.
             header.push(0xf0);
-            // Manufacturer Id - currently using the "prototyping" ID 0x7d.
+            // Manufacturer id - currently using the "prototyping" ID 0x7d.
             header.push(0x7d);
         }
 
@@ -95,7 +95,7 @@ class SysExUtil {
         if (withSysExHeader) {
             // SysEx start.
             header.push(0xf0);
-            // Manufacturer Id - currently using the "prototyping" ID 0x7d.
+            // Manufacturer id - currently using the "prototyping" ID 0x7d.
             header.push(0x7d);
         }
 
@@ -140,8 +140,8 @@ class SysExUtil {
 
     /**
      * Creates a sysex footer with the specified checksum.
-     * @param {boolean} withSysExHeader If we should include the SysEx footer as well
-     * @param {number} dataChecksum SysEx datas checksum.
+     * @param {boolean} withSysExFooter If we should include the SysEx footer as well
+     * @param {number} dataChecksum SysEx data checksum.
      * @returns {Uint8Array}
      */
     makeFooter(withSysExFooter, dataChecksum) {
@@ -173,11 +173,12 @@ class SysExUtil {
     }
 
     /**
-     * Converts data to a array of sysex tracks.
+     * Converts data to an array of sysex tracks.
      * @param {sysExTypes} type
      * @param {boolean} withHeaders
-     * @param {number} pageSize
+     * @param {Number} packetSize
      * @param {Uint8Array} data
+     * @param reset
      */
     convertToSysEx(type, withHeaders, packetSize, data, reset = true) {
         let tracks = [];
@@ -221,10 +222,8 @@ class SysExUtil {
      */
     isSysEx(data) {
         // Verify that this file contains sysex data.
-        if (!data || data[0] !== 0xf0 || data[data.length - 1] !== 0xf7) {
-            return false;
-        }
-        return true;
+        return data && (data[0] !== 0xf0) && (data[data.length - 1] !== 0xf7);
+
     }
 }
 

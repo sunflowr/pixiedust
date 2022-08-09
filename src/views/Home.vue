@@ -45,14 +45,14 @@ export default {
       axios
         .get(url)
         .then(function(response) {
-          var data = response.data;
+          const data = response.data;
 
           // the total of all the release downloads
           releaseInfo.grandTotal = 0;
 
           for (let i = 0; i < data.length; i++) {
             // total of a particular release version
-            var total = 0;
+            let total = 0;
             data[i].total = 0;
 
             for (let j = 0; j < data[i].assets.length; j++) {

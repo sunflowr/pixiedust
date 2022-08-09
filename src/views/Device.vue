@@ -134,6 +134,7 @@ export default {
   },
   data() {
     return {
+      // TODO: Upgrade code, remove syncRequest.
       syncRequest: null,
       receiveStatus: "",
       pinger: null,
@@ -214,6 +215,7 @@ export default {
   },
   methods: {
     // Deprecated message.
+    // TODO: Upgrade code, remove syncRequest and syncRequest.receive
     onVersion(message) {
       if (this.syncRequest) {
         switch (this.syncRequest.receive++) {
@@ -279,7 +281,7 @@ export default {
 
       this.uploadState.packageCount++;
 
-      if( ((this.uploadState.totalPackages < 0) && (message.data.length == 0)) ||
+      if( ((this.uploadState.totalPackages < 0) && (message.data.length === 0)) ||
           (this.uploadState.packageCount === this.uploadState.totalPackages)) {
         // Old way of uploading packages didn't use a BeginUpload to specify number of packages,
         // instead it used a message with length of 0 specify last message.
@@ -287,7 +289,7 @@ export default {
       }
     },
     /**
-     * Called on when reciving a ping response.
+     * Called on when receiving a ping response.
      * @param {Uint8Array} sysExData - SysEx message.
      */
     onPing(sysExData) {
@@ -307,8 +309,8 @@ export default {
         packageCount: 0,
         totalPackages: totalPackages,
         checksum: checksum,
-        uploadMessages: new Array(),
-        data: new Uint8Array()
+        uploadMessages: [],
+        data: new Uint8Array(0)
       }
       switch(this.uploadState.dataType) {
         case sysExUploadDataTypes.bootloader: console.log("bootloader"); break;
@@ -321,7 +323,7 @@ export default {
     },
     /** Cancels a SysEx upload and reset upload states. */
     cancelUpload() {
-      // TODO: Implement cancelation of upload.
+      // TODO: Implement cancellation of upload.
       delete this.uploadState;
     },
     /** Ends a SysEx upload and verify it. */
@@ -343,12 +345,12 @@ export default {
         }
       }
 
-      this.uploadRecived(this.uploadState.dataType, this.uploadState.data);
+      this.uploadReceived(this.uploadState.dataType, this.uploadState.data);
       delete this.uploadState;
     },
-    uploadRecived(dataType, data) {
+    uploadReceived(dataType, data) {
       /* eslint-disable no-console */
-      console.log("Data recived:");
+      console.log("Data received:");
       console.log(dataType);
       console.log(data);
       /* eslint-enable no-console */
@@ -374,7 +376,7 @@ export default {
       this.processResponse({dataType: dataType});
     },
     upload(sysExData) {
-      if ((this.$MIDI?.webMidi ?? false) == false) {
+      if ((this.$MIDI?.webMidi ?? false) === false) {
         throw new Error("No WebMIDI.");
       }
       return this.sysExRequests.queue(() => new Promise((resolve, reject) => {
@@ -386,7 +388,7 @@ export default {
       }));
     },
     sync(sysExData, timeOutMs, evalCompleted) {
-      if ((this.$MIDI?.webMidi ?? false) == false) {
+      if ((this.$MIDI?.webMidi ?? false) === false) {
         throw new Error("No WebMIDI.");
       }
       return this.sysExRequests.queue(() => new Promise((resolve, reject) => {
@@ -419,13 +421,14 @@ export default {
       this.$store.dispatch("clearDevice");
       this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.bootloader]), 5000, data => data.dataType === sysExUploadDataTypes.bootloader)
       // TODO: Catch and try old version message.
+      //.catch(err => this.sync(new Uint8Array([0x03, 0x03, 0x4d, sysExUploadDataTypes.bootloader]), 5000, data => data.dataType === sysExUploadDataTypes.bootloader))
       .then(() => this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.application]), 5000, data => data.dataType === sysExUploadDataTypes.application))
       .then(() => this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.settings]), 5000, data => data.dataType === sysExUploadDataTypes.settings))
       //.then( PING ) SysExMessage_Ping.makeSysEx(0x1f).slice(2, -1),
       .catch(err => {
         this.clearSync();
         this.receiveStatus = err.message;
-        this.receiveStatus = "No RE-CPU detected, plesae check MIDI device settings and connection.";
+        this.receiveStatus = "No RE-CPU detected, please check MIDI device settings and connection.";
       });
     },
     syncSettings() {
@@ -436,7 +439,7 @@ export default {
       .catch(err => {
         this.clearSync();
         this.receiveStatus = err.message;
-        this.receiveStatus = "No RE-CPU detected, plesae check MIDI device settings and connection.";
+        this.receiveStatus = "No RE-CPU detected, please check MIDI device settings and connection.";
       });
     },
     requestDeviceBackup() {
@@ -447,7 +450,7 @@ export default {
       .catch(err => {
         this.clearSync();
         this.receiveStatus = err.message;
-        this.receiveStatus = "No RE-CPU detected, plesae check MIDI device settings and connection.";
+        this.receiveStatus = "No RE-CPU detected, please check MIDI device settings and connection.";
       });
 
       /*const routePath = "/device/backup/sync";
@@ -501,7 +504,7 @@ export default {
       .catch(err => {
         this.clearSync();
         this.receiveStatus = err.message;
-        this.receiveStatus = "No RE-CPU detected, plesae check MIDI device settings and connection.";
+        this.receiveStatus = "No RE-CPU detected, please check MIDI device settings and connection.";
       });
 
     },

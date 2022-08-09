@@ -1,11 +1,39 @@
 {
-  "version": {
-    "magic": "uint32",
-    "hardwareId": "uint32",
-    "name": "string24",
-    "major": "uint8",
-    "minor": "uint8",
-    "patch": "uint8",
-    "revision": "uint16"
-  }
+  "version": [
+    {
+      "id": "magic",
+      "type": "uint32",
+      "default": 0
+    },
+    {
+      "id": "hardwareId",
+      "type": "uint32",
+      "default": 0
+    },
+    {
+      "id": "name",
+      "type": "string24",
+      "default": ""
+    },
+    {
+      "id": "major",
+      "type": "uint8",
+      "default": 0
+    },
+    {
+      "id": "minor",
+      "type": "uint8",
+      "default": 0
+    },
+    {
+      "id": "patch",
+      "type": "uint8",
+      "default": 0
+    },
+    {
+      "id": "revision",
+      "type": "uint16",
+      "default": 0
+    }
+  ]
 }

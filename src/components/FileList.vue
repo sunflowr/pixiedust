@@ -4,32 +4,34 @@
       <v-icon left>mdi-folder</v-icon>
       <span class="title font-weight-light">{{ label }}</span>
       <v-spacer />
-      <v-menu bottom>
-        <template v-slot:activator="{ on }">
-          <v-btn x-small icon v-on="on">
-            <v-icon>mdi-dots-vertical</v-icon>
-          </v-btn>
-        </template>
-        <v-list dense>
-          <v-list-item :disabled="!deviceAvailable" @click="$emit('sync-memory')">
-            <v-list-item-icon>
-              <v-icon>mdi-refresh</v-icon>
-            </v-list-item-icon>
-            <v-list-item-title>Sync from device</v-list-item-title>
-          </v-list-item>
-          <v-list-item @click="openImportFileDialog">
-            <v-list-item-icon>
-              <v-icon>mdi-file-import</v-icon>
-            </v-list-item-icon>
-            <v-list-item-title>Import from file</v-list-item-title>
-            <input ref="importInputFile" style="display: none" type="file">
-            <!--<input ref="importInputFile" style="display: none" type="file" accept="application/octet-stream">-->
-            <!--<input ref="importInputFile" style="display: none" type="file" accept="application/x-sysex">-->
-            <!--<input ref="importInputFile" style="display: none" type="file" accept="audio/midi">-->
-            <!--<input ref="importInputFile" style="display: none" type="file" accept="application/json">-->
-          </v-list-item>
-        </v-list>
-      </v-menu>
+        <slot name="menu">
+          <v-menu bottom>
+            <template v-slot:activator="{ on }">
+              <v-btn x-small icon v-on="on">
+                <v-icon>mdi-dots-vertical</v-icon>
+              </v-btn>
+            </template>
+            <v-list dense>
+              <v-list-item :disabled="!deviceAvailable" @click="$emit('sync-memory')">
+                <v-list-item-icon>
+                  <v-icon>mdi-refresh</v-icon>
+                </v-list-item-icon>
+                <v-list-item-title>Sync from device</v-list-item-title>
+              </v-list-item>
+              <v-list-item @click="openImportFileDialog">
+                <v-list-item-icon>
+                  <v-icon>mdi-file-import</v-icon>
+                </v-list-item-icon>
+                <v-list-item-title>Import from file</v-list-item-title>
+                <input ref="importInputFile" style="display: none" type="file">
+                <!--<input ref="importInputFile" style="display: none" type="file" accept="application/octet-stream">-->
+                <!--<input ref="importInputFile" style="display: none" type="file" accept="application/x-sysex">-->
+                <!--<input ref="importInputFile" style="display: none" type="file" accept="audio/midi">-->
+                <!--<input ref="importInputFile" style="display: none" type="file" accept="application/json">-->
+              </v-list-item>
+            </v-list>
+          </v-menu>
+        </slot>
     </v-card-title>
     <v-card-text class="pa-0 inset">
       <v-divider />
@@ -39,40 +41,42 @@
             <v-list-item-title>{{ file.name }}</v-list-item-title>
           </v-list-item-content>
           <v-list-item-action>
-            <v-menu bottom>
-              <template v-slot:activator="{ on }">
-                <v-btn x-small icon v-on="on">
-                  <v-icon>mdi-dots-vertical</v-icon>
-                </v-btn>
-              </template>
-              <v-list dense>
-                <v-list-item :disabled="!deviceAvailable" @click="$emit('file:upload', i, file)">
-                  <v-list-item-icon>
-                    <v-icon>mdi-file-export</v-icon>
-                  </v-list-item-icon>
-                  <v-list-item-title>Export to device</v-list-item-title>
-                </v-list-item>
-                <v-list-item @click="$emit('file:export', i, file)">
-                  <v-list-item-icon>
-                    <v-icon>mdi-file-export</v-icon>
-                  </v-list-item-icon>
-                  <v-list-item-title>Export to file</v-list-item-title>
-                </v-list-item>
-                <v-list-item @click="renameFile(file)">
-                  <v-list-item-icon>
-                    <v-icon>mdi-file-export</v-icon>
-                  </v-list-item-icon>
-                  <v-list-item-title>Rename</v-list-item-title>
-                </v-list-item>
-                <v-divider />
-                <v-list-item @click="deleteFile(file)">
-                  <v-list-item-icon>
-                    <v-icon>mdi-delete</v-icon>
-                  </v-list-item-icon>
-                  <v-list-item-title>Delete</v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </v-menu>
+            <slot name="file-menu">
+              <v-menu bottom>
+                <template v-slot:activator="{ on }">
+                  <v-btn x-small icon v-on="on">
+                    <v-icon>mdi-dots-vertical</v-icon>
+                  </v-btn>
+                </template>
+                <v-list dense>
+                  <v-list-item :disabled="!deviceAvailable" @click="$emit('file:upload', i, file)">
+                    <v-list-item-icon>
+                      <v-icon>mdi-file-export</v-icon>
+                    </v-list-item-icon>
+                    <v-list-item-title>Export to device</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item @click="$emit('file:export', i, file)">
+                    <v-list-item-icon>
+                      <v-icon>mdi-file-export</v-icon>
+                    </v-list-item-icon>
+                    <v-list-item-title>Export to file</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item @click="renameFile(file)">
+                    <v-list-item-icon>
+                      <v-icon>mdi-file-export</v-icon>
+                    </v-list-item-icon>
+                    <v-list-item-title>Rename</v-list-item-title>
+                  </v-list-item>
+                  <v-divider />
+                  <v-list-item @click="deleteFile(file)">
+                    <v-list-item-icon>
+                      <v-icon>mdi-delete</v-icon>
+                    </v-list-item-icon>
+                    <v-list-item-title>Delete</v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+            </slot>
           </v-list-item-action>
         </v-list-item>
       </v-list>
@@ -116,10 +120,22 @@ export default {
       this.$refs.importInputFile.click();
     },
     importFile(fileData) {
-        this.$store.dispatch("addBackupFile", {
-          name: `Backup ${this.files.length}`,
-          data: Array.from(fileData), // Need to be vanilla array due to localstorage.
-        });
+      let isSysEx = false;
+      if(fileData.length > 4) {
+        isSysEx = (fileData[0] = 0xf0) &&
+                  (fileData[1] = 0x7d) &&
+                  (fileData[2] = 0x03) &&
+                  (fileData[3] = 0x03) &&
+                  (fileData[fileData.length - 1] = 0xf7);
+      }
+      if(isSysEx) {
+        // TODO: Handle importing of sysex files.
+        throw new Error("This is a sysex file, please convert to binary.")
+      }
+      this.$store.dispatch("addBackupFile", {
+        name: `Backup ${this.files.length}`,
+        data: Array.from(fileData), // Need to be vanilla array due to localstorage.
+      });
     },
     /* eslint-disable no-console */
     renameFile(file) {
