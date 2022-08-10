@@ -67,8 +67,8 @@ export const sysExUploadDataTypes = {
     bootloader: 1,          // Uploads application, requests version.
     application: 2,         // Uploads application, requests version.
     emulatorFirmware: 3,    // Uploads firmware, requests emulated system.
-    settings: 4,
-    memoryDump: 5
+    settings: 4,            // Uploads settings.
+    memoryDump: 5           // Uploads a memory dump.
 };
 
 /** SysEx message Reset */

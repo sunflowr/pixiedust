@@ -74,6 +74,8 @@ import { Version } from "@/version";
 import { Settings } from "@/settings";
 import { sysExUtil } from "@/plugins/sysexutil";
 import sysExHandler from "@/SysExHandler";
+import { Schema } from "@/schema";
+import settingsSchema from "@/assets/schemas/settings.json";
 //import { checksumUtil } from "@/plugins/checksumutil";
 
 
@@ -142,7 +144,8 @@ export default {
       syncing: false,
       sysExRequests: new PromiseQueue(),
       sysExResponsePromises: [],
-      activeRequest: null
+      activeRequest: null,
+      settingsSchema: settingsSchema
     };
   },
   computed: {
@@ -157,9 +160,9 @@ export default {
     },
     deviceSettings() {
       if (this.device) {
-        //return new Settings(this.device.settings);
+        return this.device.settings;
       }
-      return [];
+      return null;
     },
     // TODO: Fix upload status.
     uploadDialog() { return (this.sysExResponsePromises.length > 0) || (!this.sysExRequests.isEmpty) || (this.sysExRequests.isWorking); },
@@ -407,6 +410,11 @@ export default {
         }
         this.sysExResponsePromises = [];
     },
+    abortSync(errorMessage) {
+      this.clearSync();
+      this.receiveStatus = errorMessage;
+      this.receiveStatus = "No RE-CPU detected, please check MIDI device settings and connection.";
+    },
     processResponse(data) {
       for(let i = 0; i < this.sysExResponsePromises.length; ++i) {
         const sysExResponsePromise = this.sysExResponsePromises[i];
@@ -425,33 +433,23 @@ export default {
       .then(() => this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.application]), 5000, data => data.dataType === sysExUploadDataTypes.application))
       .then(() => this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.settings]), 5000, data => data.dataType === sysExUploadDataTypes.settings))
       //.then( PING ) SysExMessage_Ping.makeSysEx(0x1f).slice(2, -1),
-      .catch(err => {
-        this.clearSync();
-        this.receiveStatus = err.message;
-        this.receiveStatus = "No RE-CPU detected, please check MIDI device settings and connection.";
-      });
+      .catch(err => { this.abortSync(err.message); });
     },
     syncSettings() {
       if (!this.device) {
+        // TODO: Sync first if no device is present.
         return;
       }
       this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.settings]), 5000, data => data.dataType === sysExUploadDataTypes.settings)
-      .catch(err => {
-        this.clearSync();
-        this.receiveStatus = err.message;
-        this.receiveStatus = "No RE-CPU detected, please check MIDI device settings and connection.";
-      });
+      .catch(err => { this.abortSync(err.message); });
     },
     requestDeviceBackup() {
       if (!this.device) {
+        // TODO: Sync first if no device is present.
         return;
       }
       this.sync(new Uint8Array([0x03, 0x03, 0x7d, sysExUploadDataTypes.memoryDump]), 5000, data => data.dataType === sysExUploadDataTypes.memoryDump)
-      .catch(err => {
-        this.clearSync();
-        this.receiveStatus = err.message;
-        this.receiveStatus = "No RE-CPU detected, please check MIDI device settings and connection.";
-      });
+      .catch(err => { this.abortSync(err.message); });
 
       /*const routePath = "/device/backup/sync";
       if (this.$route.path !== routePath) {
@@ -489,11 +487,15 @@ export default {
       }
     },
     uploadSettings() {
-      if(this.deviceSettings) {
-        //console.log(this.deviceSettings);
-        //const syxExData = sysExUtil.convertToSysEx(sysExUploadDataTypes.settings, true, 512, this.deviceSettings, false);
-        //console.log(syxExData);
+      if((!this.device) || (!this.deviceSettings)) {
+        // TODO: Sync first if no device is present.
+        return;
       }
+
+      const settingsData = Schema.serialize(this.settingsSchema, Schema.getVersionString(this.deviceSettings), this.deviceSettings);
+      const sysExData = sysExUtil.convertToSysEx(sysExUploadDataTypes.settings, false, 512, settingsData, false);
+      this.upload(sysExData)
+          .catch(err => { this.abortSync(err.message); })
     },
     uploadDeviceBackup(fileIndex = undefined) {
       if(!fileIndex) {
@@ -501,11 +503,7 @@ export default {
       }
       const syxExData = sysExUtil.convertToSysEx(sysExUploadDataTypes.memoryDump, false, 512, this.backupFiles[fileIndex].data, false);
       this.upload(syxExData)
-      .catch(err => {
-        this.clearSync();
-        this.receiveStatus = err.message;
-        this.receiveStatus = "No RE-CPU detected, please check MIDI device settings and connection.";
-      });
+          .catch(err => { this.abortSync(err.message); });
 
     },
     exportBackupFile(fileIndex) {

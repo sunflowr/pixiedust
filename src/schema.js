@@ -83,7 +83,7 @@ export class Schema {
         const serializer = new BinarySerializer();
         for (let i = 0; i < schemaVersion.length; ++i) {
             const val = schemaVersion[i];
-            serializer.serialize(val.type, data[val.id]);
+            serializer.serialize(DataTypes[val.type], data[val.id]);
         }
         /*for(const [key, value] of Object.entries(schemaVersion)) {
             DataTypes[schemaVersion[key].type].size;
@@ -108,19 +108,24 @@ export class Schema {
         const obj = {};
         for (let i = startElement ?? 0; i < schemaVersion.length; ++i) {
             const val = schemaVersion[i];
-            obj[val.id] = deserializer.deserialize(val.type);
+            obj[val.id] = deserializer.deserialize(DataTypes[val.type]);
         }
         return obj;
     }
 
     /**
      * Takes a semantic version in the form of three numbers and convert it to a string.
-     * @param {Number} major Major version number.
-     * @param {Number} minor Minor version number.
-     * @param {Number} patch Patch version number.
+     * @param {Number|Object} major Major version number or an object containing properties versionMajor, versionMinor and versionPatch.
+     * @param {Number} [minor] Minor version number.
+     * @param {Number} [patch] Patch version number.
      * @returns {string} The converted string.
      */
     static getVersionString(major, minor, patch) {
+        if (typeof major === "object") {
+            minor = major.versionMinor ?? 0;
+            patch = major.versionPatch ?? 0;
+            major = major.versionMajor ?? 0;
+        }
         return major + "." + minor + "." + patch;
     }
 }
