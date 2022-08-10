@@ -1,5 +1,5 @@
 <template>
-  <v-container v-if="this.$MIDI.webMidi">
+  <v-container v-if="$MIDI.webMidi">
       <v-alert
         icon="mdi-alert"
         border="left"

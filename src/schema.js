@@ -30,7 +30,7 @@ export class Schema {
     }
 
     /**
-     * Retives a specified version of a schema.
+     * Retrieves a specified version of a schema.
      * @param {Object} schema - Object containing all schema versions.
      * @param {String }version - Version we are interested in.
      * @returns {Object} - The requested version of the schema.

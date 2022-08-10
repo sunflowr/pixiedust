@@ -49,7 +49,7 @@ export class Rect {
       this.width = width;
       this.height = height;
     } else {
-      throw new TypeError("Arugment is of wrong type");
+      throw new TypeError("Argument is of wrong type");
     }
   }
 

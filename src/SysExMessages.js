@@ -66,7 +66,7 @@ function verifyPackagesChecksum32(data, checksum) {
 export const sysExUploadDataTypes = {
     bootloader: 1,          // Uploads application, requests version.
     application: 2,         // Uploads application, requests version.
-    emulatorFirmware: 3,    // Uploads firmware, requests emulated syst.
+    emulatorFirmware: 3,    // Uploads firmware, requests emulated system.
     settings: 4,
     memoryDump: 5
 };
@@ -186,7 +186,7 @@ export class SysExMessage_BeginUpload extends SysExMessageBase {
     get checksum() { return this._finalChecksum; }
 
     /**
-     * Takes a array of package messages to calculate total checksum of and verify it against expected checksum. 
+     * Takes an array of package messages to calculate total checksum of and verify it against expected checksum.
      * @param {number} checksum - Expected checksum. 
      * @param {Uint8Array} data - Uploaded data to check. 
      */
@@ -240,7 +240,7 @@ export class SysExMessage_EndUpload extends SysExMessageBase {
     get checksum() { return this._checksum; }
 
     /**
-     * Takes a array of package messages to calculate total checksum of and verify it against expected checksum. 
+     * Takes an array of package messages to calculate total checksum of and verify it against expected checksum.
      * @param {number} checksum - Expected checksum. 
      * @param {Uint8Array} data - Uploaded data to check. 
      */

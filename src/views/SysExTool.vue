@@ -115,7 +115,7 @@ export default {
             size += sysExData[i].length;
           }
 
-          // Flatten tracks in to a continous array.
+          // Flatten tracks in to a continuous array.
           that.sysExFile = new Uint8Array(size);
           let offset = 0;
           for (let i = 0; i < sysExData.length; ++i) {

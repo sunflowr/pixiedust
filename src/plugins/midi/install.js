@@ -199,7 +199,7 @@ export function install(Vue) {
                     this.uploading = true;
                     this.delaySendSysEx(midiOutDevice, uploadDelay, sysExDataTracks, 0, onProgress, onResolve, onReject);
                 } else {
-                    onReject("Busy uplading.");
+                    onReject("Busy uploading.");
                 }
             },
             delaySendSysEx(midiOutDevice, delayMs, tracks, currentTrack, onProgress, onResolve, onReject) {
