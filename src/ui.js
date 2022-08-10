@@ -80,7 +80,7 @@ export class Rect {
 }
 
 export class UI {
-  static instance = new UI();;
+  static instance = new UI();
   static get currentEvent() {
     return UI.instance.currentEvent;
   }

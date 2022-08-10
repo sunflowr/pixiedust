@@ -1,9 +1,9 @@
 class ChecksumUtil {
   crc32ForByte(val) {
-    const polynom = 0xedb88320;
-    let ret = val;
+    const polynomial = 0xedb88320;
+    let ret = val >>> 0;
     for(let i = 0; i < 8; ++i) {
-      ret = ((ret & 1) ? 0 : polynom) ^ ret >>> 1;
+      ret = (((ret & 1) === 1) ? 0 : polynomial) ^ ret >>> 1;
     }
     return (ret ^ 0xff000000) >>> 0;
   }

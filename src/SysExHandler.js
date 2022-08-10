@@ -242,7 +242,7 @@ class SysExHandler {
      * @callback sysExMessageCallback
      */
      constructor() {
-        this._listeners = new Array();
+        this._listeners = [];
     }
 
     /**
@@ -258,7 +258,7 @@ class SysExHandler {
         if(index < 0) {
             this._listeners.push({
                 headerPrefix: sysExHeaderPrefix,
-                listeners: new Array()
+                listeners: []
             });
             index = this._listeners.length - 1;
         }

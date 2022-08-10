@@ -109,7 +109,9 @@ export default {
       rules: {
         byteValue: value => Number.isInteger(value) || 'Required'
       },
+      /** @type {?String} */
       errorMessage: null,
+      /** @type {?BackupFile} */
       currentBackup: null,
       editIndex: -1,
       hexHeader: [
@@ -223,7 +225,7 @@ export default {
         }
       } else {
         this.errorMessage = null;
-        this.currentBackup = { name: "new", data: new Uint8Array() };
+        this.currentBackup = { name: "new", data: new Uint8Array(0) };
         console.log("new backup");
         console.log(id);
         console.log(this.backupFiles);

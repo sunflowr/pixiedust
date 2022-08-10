@@ -37,8 +37,8 @@ class SysExUtil {
 
     /**
      * Creates a sysex begin upload header with the specified type and package id.
-     * @param {boolean} withSysExHeader If we should include the SysEx header as well
-     * @param {sysExTypes} type
+     * @param {Boolean} withSysExHeader If we should include the SysEx header as well
+     * @param {SysExType} type
      * @param {Number} totalPackages
      * @param {Number} finalChecksum
      * @returns {Uint8Array}
@@ -84,9 +84,9 @@ class SysExUtil {
 
     /**
      * Creates a sysex header with the specified type and package id.
-     * @param {boolean} withSysExHeader If we should include the SysEx header as well
-     * @param {sysExTypes} type
-     * @param {number} packageId
+     * @param {Boolean} withSysExHeader If we should include the SysEx header as well
+     * @param {SysExType} type
+     * @param {Number} packageId
      * @returns {Uint8Array}
      */
     makeHeader(withSysExHeader, type, packageId = undefined) {
@@ -174,7 +174,7 @@ class SysExUtil {
 
     /**
      * Converts data to an array of sysex tracks.
-     * @param {sysExTypes} type
+     * @param {SysExType} type
      * @param {boolean} withHeaders
      * @param {Number} packetSize
      * @param {Uint8Array} data
@@ -227,11 +227,20 @@ class SysExUtil {
     }
 }
 
+/**
+ * @typedef {Number} SysExType
+ */
+
 export const sysExTypes = {
+    /** @type {SysExType} */
     uploadBootloader: 0x01,
+    /** @type {SysExType} */
     uploadApplication: 0x02,
+    /** @type {SysExType} */
     uploadEmuFW: 0x03,
+    /** @type {SysExType} */
     test: 0x04,
+    /** @type {SysExType} */
     reset: 0x05
 };
 

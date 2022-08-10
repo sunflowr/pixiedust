@@ -23,7 +23,7 @@ export class BinarySerializer {
         for(let i = 0; i < array.length; ++i) {
             newBuffer[this._data.length + i] = (array[i] >>> 0) & 0xff;
         }
-        this._data = newBuffer;
+        this._data = Array.from(newBuffer);
         return this;
     }
 
@@ -67,13 +67,18 @@ export class BinarySerializer {
         }
     }
 
+    /**
+     * Deserialize type from data.
+     * @param {DataType} type - Type to deserialize.
+     * @returns {*} - Deserialized data.
+     */
     deserialize(type) {
         switch (type) {
             case DataTypes.bool:
                 return ((this._data[this._readPosition++] >>> 0) !== 0);
             case DataTypes.string24:
                 {
-                    const value = new TextDecoder("utf-8").decode(this._data.slice(this._readPosition, this._readPosition + 24));
+                    const value = new TextDecoder("utf-8").decode(this.data.slice(this._readPosition, this._readPosition + 24));
                     this._readPosition += 24;
                     return value;
                 }
@@ -90,5 +95,16 @@ export class BinarySerializer {
             default:
                 throw TypeError("Unknown data type.");
         }
+    }
+
+    /**
+     * Converts data to specified type.
+     * @param {DataType} type - Data type to convert to.
+     * @param {Uint8Array} data - Data to convert.
+     * @returns {*} - Converted data.
+     */
+    static deserialize(type, data) {
+        const serializer = new BinarySerializer(data);
+        return serializer.deserialize(type);
     }
 }

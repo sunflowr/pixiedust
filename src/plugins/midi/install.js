@@ -170,9 +170,10 @@ export function install(Vue) {
                 return new Promise(resolve => setTimeout(resolve, ms));
             },
             /**
-             * 
+             *
              * @param {*} midiOutDevice - MIDI output device.
              * @param {Uint8Array} sysExData - SysEx data to send.
+             * @param {CallableFunction} [init] - Optional initialization callback to call before sending.
              * @returns {Promise} Promise of the SysEx send.
              */
             sendSysExAsync(midiOutDevice, sysExData, init) {

@@ -21,10 +21,17 @@ const DEFAULT_SETTINGS = {
   settings: new Settings()
 };*/
 
+/**
+ * @typedef BackupFile
+ * @property {String} name - Name of backup.
+ * @property {Uint8Array} data - Backup content.
+ */
+
 export default new Vuex.Store({
   state: {
     settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
     device: null,
+    /** @type {BackupFile[]} */
     backupFiles: [],
     uploads: []
   },

@@ -7,7 +7,7 @@
       :activeBackupFile="activeBackupFile"
       @device:sync="syncDeviceInfo"
       @device:request-backup="requestDeviceBackup"
-      @device:view-backup-file="(i) => activeBackupFile = i"
+      @device:view-backup-file="(i) => this.activeBackupFile = i"
       @device:upload-backup-file="uploadDeviceBackup"
       @device:export-backup-file="exportBackupFile"
     />
@@ -516,7 +516,7 @@ export default {
       if(exportSysEx) {
         //console.log(SysExMessage_BeginUpload.makeSysEx(sysExUploadDataTypes.memoryDump, 7, checksumUtil.calculateCRC(file.data)));
         const syxExTracks = sysExUtil.convertToSysEx(sysExUploadDataTypes.memoryDump, true, 512, file.data, false);
-        let data = new Uint8Array();
+        let data = new Uint8Array(0);
         for(let i = 0; i < syxExTracks.length; ++i) {
           const data2 = new Uint8Array(data.length + syxExTracks[i].length);
           data2.set(data);

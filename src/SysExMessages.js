@@ -227,8 +227,8 @@ export class SysExMessage_EndUpload extends SysExMessageBase {
     /** Parses data. Silly redirection of constructor as there seem to be some issue with extend and base fields. */
     parse() {
         this._dataType = this._data[0];
-        this._totalPackages = SysExMessageBase.toUint32(sysExUtil.denibbelize(this._data.slice(1, 9)));
-        this._checksum = SysExMessageBase.toUint32(sysExUtil.denibbelize(this._data.slice(9, 17)));
+        this._totalPackages = BinarySerializer.deserialize(DataTypes.uint32, sysExUtil.denibbelize(this._data.slice(1, 9)));
+        this._checksum = BinarySerializer.deserialize(DataTypes.uint32, sysExUtil.denibbelize(this._data.slice(9, 17)));
         this._data = this._data.slice(1);
     }
 

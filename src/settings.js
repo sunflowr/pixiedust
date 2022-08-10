@@ -4,10 +4,10 @@ import { BinarySerializer } from "@/BinarySerializer";
 import { DataTypes } from "@/datatypes";
 
 export class Settings {
-    constructor(settings) {
-        if (typeof settings === "object") {
-            if (settings instanceof Uint8Array) {
-                const deserializer = new BinarySerializer(settings);
+    constructor(data) {
+        if (typeof data === "object") {
+            if (data instanceof Uint8Array) {
+                const deserializer = new BinarySerializer(data);
                 this.magic = deserializer.deserialize(DataTypes.uint32);
                 if (this.magic !== 0xac1dc0de) {
                     throw new Error("Unrecognized device version, this is not a RE-CPU your talking to.");
@@ -16,20 +16,21 @@ export class Settings {
                 this.versionMinor = deserializer.deserialize(DataTypes.uint8);
                 this.versionPatch = deserializer.deserialize(DataTypes.uint8);
                 const schemaVersion = this.getSchema();
-                const settings = Schema.deserialize(settingsSchema, this.getVersionString(), deserializer, 4);
+                //const settings = Schema.deserialize(settingsSchema, this.getVersionString(), deserializer, 4);
                 for (let i = 4; i < schemaVersion.length; ++i) {
                     const val = schemaVersion[i];
                     this[val.id] = deserializer.deserialize(DataTypes[val.type]);
                 }
-            }
-            else {
+            } else if (data instanceof Settings) {
                 // TODO: Transfer settings.
                 // TODO: Set version number so getSchema() works.
-                const version = Schema.getVersionString(settings.versionMajor, settings.versionMinor, settings.versionPatch);
+                const version = Schema.getVersionString(data.versionMajor, data.versionMinor, data.versionPatch);
                 Object.assign(this, Schema.create(settingsSchema, version));
-                for(const [key, value] of Object.entries(settings)) {
+                for(const [key, value] of Object.entries(data)) {
                     this[key] = value;
                 }
+            } else {
+                // TODO: Transfer settings.
             }
         } else {
             // TODO: Set version number so getSchema() works.

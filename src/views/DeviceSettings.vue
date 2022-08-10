@@ -75,8 +75,9 @@ export default {
         for (let i = 0; i < entries.length; ++i) {
           const key = entries[i][0];
           const val = entries[i][1];
-          if ("view" in schema[key]) {
-            settings[key] = { value: val, type: schema[key] };
+          const schemaEntry = schema.find(x => x.id === key);
+          if (schemaEntry && ("view" in schemaEntry)) {
+            settings[key] = { value: val, type: schemaEntry };
           }
         }
         return settings;
