@@ -2,7 +2,7 @@
  * @module: sysexmessages
  */
 //import { SysExMessageBase, SysExMessageDesc } from "@/SysExHandler";
-import { SysExMessageBase } from "@/SysExHandler";
+import { SysExMessageBase} from "@/SysExHandler";
 import { sysExUtil } from "@/plugins/sysexutil";
 import { BinarySerializer } from "@/BinarySerializer";
 import { DataTypes } from "@/datatypes";
@@ -148,8 +148,8 @@ export class SysExMessage_BeginUpload extends SysExMessageBase {
         const serializer = new BinarySerializer(SysExMessage_BeginUpload.headerPrefix);
         serializer.serialize(DataTypes.uint8, dataType & 0x7f);
         const dataSerializer = new BinarySerializer();
-        dataSerializer.serialize(DataTypes.uint32, totalPackages);
-        dataSerializer.serialize(DataTypes.uint32, checksum);
+        dataSerializer.serialize(DataTypes.uint32rev, totalPackages);
+        dataSerializer.serialize(DataTypes.uint32rev, checksum);
         dataSerializer.serialize(DataTypes.uint8, sysExUtil.calculateDataChecksum(dataSerializer.data));
         serializer.push(sysExUtil.nibbelize(dataSerializer.data));
         serializer.serialize(DataTypes.uint8, 0xf7);
@@ -173,8 +173,8 @@ export class SysExMessage_BeginUpload extends SysExMessageBase {
         this._dataType = this._data[0];
         this._data = sysExUtil.denibbelize(this._data.slice(1, -1));
         const deserializer = new BinarySerializer(this._data);
-        this._totalPackages = deserializer.deserialize(DataTypes.uint32);
-        this._finalChecksum = deserializer.deserialize(DataTypes.uint32);
+        this._totalPackages = deserializer.deserialize(DataTypes.uint32rev);
+        this._finalChecksum = deserializer.deserialize(DataTypes.uint32rev);
         this._checksum = deserializer.deserialize(DataTypes.uint16);
     }
 

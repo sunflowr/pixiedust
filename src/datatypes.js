@@ -45,7 +45,19 @@ export const DataTypes = {
         default: 0
     },
     /** @type {DataType} */
+    uint16rev: {
+        size: 2,
+        type: "number",
+        default: 0
+    },
+    /** @type {DataType} */
     uint32: {
+        size: 4,
+        type: "number",
+        default: 0
+    },
+    /** @type {DataType} */
+    uint32rev: {
         size: 4,
         type: "number",
         default: 0

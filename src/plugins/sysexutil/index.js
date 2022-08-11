@@ -66,8 +66,8 @@ class SysExUtil {
         header.push(type & 0x7f);
 
         const serializer = new BinarySerializer();
-        serializer.serialize(DataTypes.uint32, totalPackages);
-        serializer.serialize(DataTypes.uint32, finalChecksum);
+        serializer.serialize(DataTypes.uint32rev, totalPackages);
+        serializer.serialize(DataTypes.uint32rev, finalChecksum);
         serializer.serialize(DataTypes.uint8, this.calculateDataChecksum(serializer.data));
         const data = this.nibbelize(serializer.data);
         for(let d of data) {

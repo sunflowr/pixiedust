@@ -95,6 +95,9 @@
 </style>
 
 <script>
+import { SysExMessage_BeginUpload, SysExMessage_Upload, sysExUploadDataTypes } from "@/SysExMessages";
+import { compareArrays, splitSysExMessages } from "@/SysExHandler";
+
 export default {
   name: "FileList",
   props: {
@@ -121,16 +124,54 @@ export default {
     },
     importFile(fileData) {
       let isSysEx = false;
-      if(fileData.length > 4) {
-        isSysEx = (fileData[0] = 0xf0) &&
-                  (fileData[1] = 0x7d) &&
-                  (fileData[2] = 0x03) &&
-                  (fileData[3] = 0x03) &&
-                  (fileData[fileData.length - 1] = 0xf7);
+      if(fileData.length > 8) {
+        isSysEx = (fileData[0] === 0xf0) &&
+                  (fileData[1] === 0x7d) &&
+                  (fileData[2] === 0x03) &&
+                  (fileData[3] === 0x03) &&
+                  (fileData[4] === 0x7e) &&
+                  (fileData[fileData.length - 1] === 0xf7);
       }
       if(isSysEx) {
-        // TODO: Handle importing of sysex files.
-        throw new Error("This is a sysex file, please convert to binary.")
+        let messages = splitSysExMessages(fileData);
+        let totalPackages = messages.length;
+        let dataType = -1;
+        // Get data type and content.
+        if(compareArrays(SysExMessage_BeginUpload.headerPrefix, messages[0].slice(0, SysExMessage_BeginUpload.headerPrefix.length))) {
+          const beginPackage = new SysExMessage_BeginUpload(messages[0]);
+          totalPackages = beginPackage.totalPackages;
+          dataType = beginPackage.dataType;
+          messages = messages.slice(1);
+
+          if(dataType !== sysExUploadDataTypes.memoryDump) {
+            throw new Error("SysEx data type is not supported, only memory dumps can currently be imported.");
+          }
+
+          if(messages.length !== totalPackages) {
+            throw new Error("SysEx memory dump seem to be missing data, is it corrupted?.");
+          }
+        }
+
+        let importedData = new Uint8Array(0);
+        for(let i = 0; i < messages.length; ++i) {
+          if(compareArrays(SysExMessage_Upload.headerPrefix, messages[i].slice(0, SysExMessage_Upload.headerPrefix.length))) {
+            const uploadPackage = new SysExMessage_Upload(messages[i]);
+
+            if(dataType !== sysExUploadDataTypes.memoryDump) {
+              throw new Error("SysEx data type is not supported, only memory dumps can currently be imported.");
+            }
+
+            const importedDataTmp = new Uint8Array(importedData.length + uploadPackage.data.length);
+            importedDataTmp.set(importedData);
+            importedDataTmp.set(uploadPackage.data, importedData.length);
+            importedData = importedDataTmp;
+          } else {
+            throw new Error("SysEx data type is not supported, only memory dumps can currently be imported.");
+          }
+        }
+
+        // Data successfully imported, assign it as file data to store.
+        fileData = importedData;
       }
       this.$store.dispatch("addBackupFile", {
         name: `Backup ${this.files.length}`,

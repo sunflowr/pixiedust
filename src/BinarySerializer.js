@@ -55,7 +55,19 @@ export class BinarySerializer {
                     (value >>> 8) & 0xff,
                     (value >>> 0) & 0xff
                 ]));
+            case DataTypes.uint16rev:
+                return this.push(new Uint8Array([
+                    (value >>> 0) & 0xff,
+                    (value >>> 8) & 0xff
+                ]));
             case DataTypes.uint32:
+                return this.push(new Uint8Array([
+                    (value >>> 0) & 0xff,
+                    (value >>> 8) & 0xff,
+                    (value >>> 16) & 0xff,
+                    (value >>> 24) & 0xff
+                ]));
+            case DataTypes.uint32rev:
                 return this.push(new Uint8Array([
                     (value >>> 24) & 0xff,
                     (value >>> 16) & 0xff,
@@ -85,13 +97,21 @@ export class BinarySerializer {
             case DataTypes.uint8:
                 return (this._data[this._readPosition++]) >>> 0;
             case DataTypes.uint16:
-                return (this._data[this._readPosition++] |
-                    (this._data[this._readPosition++] << 8)) >>> 0;
+                return ((this._data[this._readPosition++]) |
+                        (this._data[this._readPosition++] << 8)) >>> 0;
+            case DataTypes.uint16rev:
+                return ((this._data[this._readPosition++] << 8) |
+                        (this._data[this._readPosition++])) >>> 0;
             case DataTypes.uint32:
-                return (this._data[this._readPosition++] |
-                    (this._data[this._readPosition++] << 8) |
-                    (this._data[this._readPosition++] << 16) |
-                    (this._data[this._readPosition++] << 24)) >>> 0;
+                return ((this._data[this._readPosition++]) |
+                        (this._data[this._readPosition++] << 8) |
+                        (this._data[this._readPosition++] << 16) |
+                        (this._data[this._readPosition++] << 24)) >>> 0;
+            case DataTypes.uint32rev:
+                return ((this._data[this._readPosition++] << 24) |
+                        (this._data[this._readPosition++] << 16) |
+                        (this._data[this._readPosition++] << 8) |
+                        (this._data[this._readPosition++])) >>> 0;
             default:
                 throw TypeError("Unknown data type.");
         }

@@ -1,6 +1,6 @@
 import { sysExUtil } from "@/plugins/sysexutil";
 
-function compareArrays(a, b) {
+export function compareArrays(a, b) {
     if (a === b) { return true; }
     if ((!a) || (!b)) { return false; }
     if (a.length !== b.length) { return false; }
@@ -8,6 +8,28 @@ function compareArrays(a, b) {
         if (a[i] !== b[i]) { return false; }
     }
     return true;
+}
+
+/**
+ * Takes a data array and split it at the sysex end message.
+ * @param {Array|Uint8Array} data - Data array to split.
+ * @returns {Array} - Array of Aarrays/Uint8Arrays
+ */
+export function splitSysExMessages(data) {
+    let result = []
+    let i = 0;
+    while(i < data.length) {
+        const start = i;
+        let end = data.indexOf(0xf7, i);
+        if(end < 0) {
+            end = data.length;
+        } else {
+            ++end;
+        }
+        result.push(data.slice(start, end));
+        i = end;
+    }
+    return result;
 }
 
 export class SysExMessageBase {
